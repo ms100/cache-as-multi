@@ -1,0 +1,30 @@
+spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 10s
+  mvc:
+    pathmatch:
+      matching-strategy: ANT_PATH_MATCHER
+  redis:
+    host: 127.0.0.1
+    port: 6379
+  cache:
+    redis:
+      time-to-live: PT15M
+      cache-name-time-to-live:
+        maps:
+          foo: PT15S
+          demo: PT5M
+          newBar: PT1M
+
+server:
+  tomcat:
+    uri-encoding: UTF-8
+  port: 8080
+  servlet:
+    context-path: /
+  shutdown: graceful
+
+
+logging:
+  level:
+    io.github.ms100.cacheasmulti: debug
