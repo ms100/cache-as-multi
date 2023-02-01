@@ -3,10 +3,11 @@
 ## 安装
 ### Maven
 ```xml
+
 <dependency>
-    <groupId>io.github.ms100</groupId>
-    <artifactId>cache-as-multi</artifactId>
-    <version>1.0.0</version>
+  <groupId>io.github.ms100</groupId>
+  <artifactId>cache-as-multi</artifactId>
+  <version>1.1.1</version>
 </dependency>
 ```
 
@@ -288,17 +289,17 @@ spring:
 
 #### 针对Redis的扩展点单独配置
 
-有 `RedisCacheManagerBuilderCustomizer` 接口，可以在 `RedisCacheManager` 生成前，自定义 `RedisCacheManagerBuilder` 想要的配置。
+只要实现 `RedisCacheManagerBuilderCustomizer` 接口，就可以在 `RedisCacheManager` 生成前，设置 `RedisCacheManagerBuilder` 实现自定义配置。
 
-> 具体实现查看 `RedisCacheSpecificTimeToLiveCustomizer`。
+> 具体实现查看 `RedisCacheCustomizer` 类。
 
-之后只需增加配置 cache-name-time-to-live：
+之后只需增加如下配置：
 ```yaml
 spring:
   cache:
     redis:
       time-to-live: PT15M  #默认缓存15分钟
-      cache-as-multi:
+      cache-as-multi: #下面是 cache-as-multi 的配置
         serialize-to-json: true #使用 RedisSerializer.json() 序列化
         cache-name-time-to-live-map: #cacheName对应的缓存时间
           foo: PT15S  #foo缓存15秒
