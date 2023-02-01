@@ -1,12 +1,12 @@
 package io.github.ms100.cacheasmulti.cache.service;
 
 import io.github.ms100.cacheasmulti.cache.annotation.CacheAsMulti;
-import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -62,23 +62,23 @@ public class FarService {
     @Cacheable(cacheNames = "far2", key = "#a0+' '+#a1")
     public Object getFar2(Integer id, String str) {
         System.out.println("getFar2====----" + id);
-        return Pair.of(id, String.format("id:%d,name:%s", id, id));
+        return Arrays.asList(id, String.format("id:%d,name:%s", id, id));
     }
 
     @CachePut(cacheNames = "far2", key = "#id+' '+#a1")
-    public String putFar2(Integer id, String str) {
+    public Object putFar2(Integer id, String str) {
         System.out.println("putFar2====----" + id);
 
         return "AAA";
     }
 
-    @CachePut(cacheNames = "far2", key = "#result.getLeft()+' '+#a1")
+    @CachePut(cacheNames = "far2", key = "#result.get(0)+' '+#a1")
     public Map<Integer, Object> putMultiFar2(@CacheAsMulti Set<Integer> ids, String str) {
         System.out.println("putMultiFar2====----" + ids.toString());
 
         return ids.stream().collect(Collectors.toMap(
                 id -> id,
-                id -> Pair.of(id, String.format("id:%d,name:%s", id, id))
+                id -> Arrays.asList(id, String.format("id:%d,name:%s", id, id))
         ));
     }
 

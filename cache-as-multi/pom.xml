@@ -5,7 +5,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>io.github.ms100</groupId>
   <artifactId>cache-as-multi</artifactId>
-  <version>1.0.0</version>
+  <version>1.1.0</version>
 
   <name>cache-as-multi</name>
   <url>http://https://github.com/ms100/cache-as-multi</url>
@@ -51,6 +51,11 @@
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-data-redis</artifactId>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
       <optional>true</optional>
     </dependency>
     <dependency>

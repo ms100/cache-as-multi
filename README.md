@@ -298,8 +298,9 @@ spring:
   cache:
     redis:
       time-to-live: PT15M  #默认缓存15分钟
-      cache-name-time-to-live: #缓存key的缓存时间
-        maps:
+      cache-as-multi:
+        serialize-to-json: true #使用 RedisSerializer.json() 序列化
+        cache-name-time-to-live-map: #cacheName对应的缓存时间
           foo: PT15S  #foo缓存15秒
           demo: PT5M  #demo缓存5分钟
 ```

@@ -7,14 +7,17 @@ spring:
   redis:
     host: 127.0.0.1
     port: 6379
+    password: 123456
   cache:
     redis:
       time-to-live: PT15M
-      cache-name-time-to-live:
-        maps:
+      cache-as-multi:
+        serialize-to-json: true
+        cache-name-time-to-live-map:
           foo: PT15S
           demo: PT5M
           newBar: PT1M
+          dog: PT1M
 
 server:
   tomcat:

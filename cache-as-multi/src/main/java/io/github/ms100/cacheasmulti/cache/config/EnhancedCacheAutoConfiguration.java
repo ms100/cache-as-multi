@@ -3,7 +3,7 @@ package io.github.ms100.cacheasmulti.cache.config;
 import io.github.ms100.cacheasmulti.cache.convert.EnhancedCacheConversionService;
 import io.github.ms100.cacheasmulti.cache.convert.converter.EnhancedCacheConverter;
 import io.github.ms100.cacheasmulti.jcache.config.EnhancedJCacheConfiguration;
-import io.github.ms100.cacheasmulti.support.RedisCacheNameTimeToLiveCustomizer;
+import io.github.ms100.cacheasmulti.support.RedisCacheCustomizer;
 import io.github.ms100.cacheasmulti.support.TypeMethodKeyGenerator;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -63,8 +63,8 @@ public class EnhancedCacheAutoConfiguration extends AbstractCachingConfiguration
     @Bean
     @ConditionalOnClass(name = "org.springframework.data.redis.cache.RedisCacheManager")
     @ConditionalOnMissingBean
-    @ConfigurationProperties(prefix = "spring.cache.redis.cache-name-time-to-live")
-    public RedisCacheNameTimeToLiveCustomizer redisCacheNameTimeToLiveCustomizer() {
-        return new RedisCacheNameTimeToLiveCustomizer();
+    @ConfigurationProperties(prefix = "spring.cache.redis.cache-as-multi")
+    public RedisCacheCustomizer redisCacheCustomizer() {
+        return new RedisCacheCustomizer();
     }
 }
