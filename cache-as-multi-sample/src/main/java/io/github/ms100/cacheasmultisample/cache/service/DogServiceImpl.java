@@ -16,7 +16,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Slf4j
 @CacheConfig(cacheNames = "dog")
-class DogServiceImpl implements DogService {
+public class DogServiceImpl implements DogService {
 
     @Override
     @Cacheable

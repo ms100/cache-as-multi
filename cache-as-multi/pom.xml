@@ -11,6 +11,7 @@
     <url>https://github.com/ms100/cache-as-multi</url>
     <description>
         Enhance spring cache annotation and realize the batch data caching.
+        扩展 Spring Cache 实现批量数据的缓存。
     </description>
 
     <inceptionYear>2023</inceptionYear>
@@ -29,7 +30,7 @@
     </scm>
     <developers>
         <developer>
-            <name>zhumengshuai</name>
+            <name>Zhu Mengshuai</name>
             <email>ms1.0@qq.com</email>
         </developer>
     </developers>

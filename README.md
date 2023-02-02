@@ -12,7 +12,7 @@
 ```
 
 
-## 使用：
+## 使用
 
 本注解需要与下面两套注解搭配使用，以实现对被注解参数所在的方法进行批量的缓存操作。
 
@@ -139,7 +139,7 @@ class FooService {
   }
   ```
 
-### 与其他注解搭配使用时的说明：
+### 与其他注解搭配使用时的说明
 * 与 Spring 的 `@CachePut` 搭配时，同样符合上面的例子。
 * 与 `@CacheEvict` 搭配时，若注解的 `@CacheEvict.key()` 参数中没有 `#result`，对【方法】返回类型无要求；若 key 中有 `#result`，【方法】返回类型需要是 `Map` 或 `List`。
 * 与 Spring 的 `@CachePut`、`@CacheEvict` 搭配，若 key 参数中已有 `#result`， 则可以没有【对象集合参数】的引用。
@@ -211,7 +211,7 @@ class FooService {
   }
   ```
 
-### 总结和补充：
+### 总结和补充
 1. `@CacheAsMulti` 注解不能替代 Spring 缓存注解中的 key 参数，例如：`@Cacheable.key()`，也不能替代 `@CacheKey`、`@CacheValue` 注解。
 2. 如果使用自定义的 `KeyGenerator`，则会用【对象集合参数】的每个【元素】和其他参数组成 `Object[]` 传入 `KeyGenerator.generate(Object, Method, Object...)` 计算缓存 key；自定义的 `CacheKeyGenerator` 也一样。
 3. 与生成缓存的注解搭配使用时，若方法的返回类型是 `Map`，【元素】在 `Map` 中对应的值为 `null` 就会缓存 `null`，【元素】在 `Map` 中不存在就不缓存。

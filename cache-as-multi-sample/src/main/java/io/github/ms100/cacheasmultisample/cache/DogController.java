@@ -25,12 +25,12 @@ public class DogController {
 
 
     @RequestMapping("/getDogs")
-    public Map<Long, Dog> getDogs(@RequestParam("ids") Long[] dogIds) {
+    public Map<Long, Dog> getDogs(@RequestParam("id") Long[] dogIds) {
         return dogService.getDogs(Arrays.asList(dogIds));
     }
 
     @RequestMapping("/getDogList")
-    public List<Dog> getDogList(@RequestParam("ids") Long[] dogIds) {
+    public List<Dog> getDogList(@RequestParam("id") Long[] dogIds) {
         return dogService.getDogList(Arrays.asList(dogIds));
     }
 
