@@ -1,6 +1,6 @@
 package io.github.ms100.cacheasmulti.support;
 
-import lombok.Setter;
+import lombok.Data;
 import org.springframework.boot.autoconfigure.cache.RedisCacheManagerBuilderCustomizer;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
@@ -14,16 +14,15 @@ import java.util.Map;
 /**
  * @author zhumengshuai
  */
+@Data
 public class RedisCacheCustomizer implements RedisCacheManagerBuilderCustomizer {
     /**
      * 使用 RedisSerializer.json 序列化
      */
-    @Setter
     private boolean serializeToJson = false;
     /**
      * CacheName 对应的 TTL(PT 时间格式)
      */
-    @Setter
     private Map<String, Duration> cacheNameTimeToLiveMap = Collections.emptyMap();
 
     @Override
