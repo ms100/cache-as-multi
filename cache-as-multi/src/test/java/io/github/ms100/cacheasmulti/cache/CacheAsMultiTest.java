@@ -1,15 +1,15 @@
 package io.github.ms100.cacheasmulti.cache;
 
+import io.github.ms100.cacheasmulti.cache.service.BoxService;
 import io.github.ms100.cacheasmulti.cache.service.FarService;
 import io.github.ms100.cacheasmulti.cache.service.NewBarServiceImpl;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.cache.annotation.EnableCaching;
-import org.springframework.core.Ordered;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -19,12 +19,12 @@ import java.util.Set;
  */
 @SpringBootTest
 class CacheAsMultiTest {
-
     @Autowired
     private NewBarServiceImpl barService;
-
     @Autowired
     private FarService farService;
+    @Autowired
+    private BoxService boxService;
 
     private final Integer id = 3;
 
@@ -113,5 +113,47 @@ class CacheAsMultiTest {
         str = barService.getBar(id, "b");
         System.out.println(str);
         Assertions.assertNotEquals("BBB", str);
+    }
+
+    @Test
+    void getMultiBox() {
+        boxService.delMultiBox(ids);
+        boxService.getMultiBox(ids);
+        boxService.getMultiBox(ids);
+        boxService.getMultiBox(ids);
+        Set<Integer> ids2 = new HashSet<>(Arrays.asList(1, 3, 5, 7));
+        boxService.delMultiBox(ids2);
+        System.out.println(boxService.getMultiBox(ids2));
+        System.out.println(boxService.getMultiBox(ids2));
+    }
+
+    @Test
+    void putMultiBox() {
+        boxService.delMultiBox(ids);
+        boxService.putMultiBox(ids);
+        boxService.getMultiBox(ids);
+        Set<Integer> ids2 = new HashSet<>(Arrays.asList(1, 3, 5, 7));
+        boxService.delMultiBox(ids2);
+        System.out.println(boxService.putMultiBox(ids2));
+        System.out.println(boxService.getMultiBox(ids2));
+    }
+
+    @Test
+    void getMultiBox2() {
+        boxService.delMultiBox2(ids, "a");
+        boxService.getMultiBox2(ids, "a");
+        boxService.getMultiBox2(ids, "a");
+        boxService.getMultiBox2(ids, "a");
+        Set<Integer> ids2 = new HashSet<>(Arrays.asList(1, 3, 5, 7));
+        boxService.delMultiBox2(ids2, "a");
+        System.out.println(boxService.getMultiBox2(ids2, "a"));
+        System.out.println(boxService.getMultiBox2(ids2, "a"));
+    }
+
+    @Test
+    void putMultiBox2() {
+        boxService.delMultiBox2(ids, "a");
+        boxService.putMultiBox2(ids, "a");
+        boxService.getMultiBox2(ids, "a");
     }
 }

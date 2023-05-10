@@ -32,11 +32,19 @@ public class CacheAsMultiParameterDetail {
      */
     private final Annotation[] annotations;
 
+    /**
+     * 严格的null模式
+     */
+    @Getter
+    private final boolean strictNull;
+
     public CacheAsMultiParameterDetail(Method method, int position) {
         Parameter parameter = method.getParameters()[position];
         this.annotations = parameter.getAnnotations();
         this.rawType = parameter.getType();
         this.position = position;
+        CacheAsMulti annotation = parameter.getAnnotation(CacheAsMulti.class);
+        this.strictNull = annotation.strictNull();
     }
 
     public boolean isAnnotationPresent(Class<? extends Annotation> clazz) {

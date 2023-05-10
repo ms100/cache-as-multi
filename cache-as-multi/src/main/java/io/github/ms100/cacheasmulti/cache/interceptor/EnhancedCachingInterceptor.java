@@ -133,8 +133,16 @@ public class EnhancedCachingInterceptor extends CacheInterceptor {
             argValueMap = multiOperation.makeCacheMap(cacheAsMultiArg, returnValue);
 
             if (!CollectionUtils.isEmpty(argValueMap)) {
-                putCachedItems(contexts.get(CacheableOperation.class), argValueMap);
-                putCachedItems(contexts.get(CachePutOperation.class), argValueMap);
+                if (multiOperation.isStrictNull()) {
+                    putCachedItems(contexts.get(CacheableOperation.class), argValueMap);
+                    putCachedItems(contexts.get(CachePutOperation.class), argValueMap);
+                } else {
+                    putCachedItems(contexts.get(CacheableOperation.class), cacheAsMultiArg, argValueMap);
+                    putCachedItems(contexts.get(CachePutOperation.class), cacheAsMultiArg, argValueMap);
+                }
+            } else if (!multiOperation.isStrictNull()) {
+                putCachedItems(contexts.get(CacheableOperation.class), cacheAsMultiArg, Collections.emptyMap());
+                putCachedItems(contexts.get(CachePutOperation.class), cacheAsMultiArg, Collections.emptyMap());
             }
         } else {
             Pair<Map<?, ?>, Object> pair = findCachedItems(contexts, invoker);
@@ -152,7 +160,6 @@ public class EnhancedCachingInterceptor extends CacheInterceptor {
         }
 
         processCacheEvicts(contexts, false, argValueMap);
-
 
         return returnValue;
     }
@@ -248,6 +255,14 @@ public class EnhancedCachingInterceptor extends CacheInterceptor {
         return invokeWithMissCacheAsMultiArg(cacheableContexts, invoker, missCacheAsMultiArg, argValueMap);
     }
 
+    /**
+     * 从缓存里查找
+     *
+     * @param context            上下文
+     * @param subCacheAsMultiArg CacheAsMulti参数
+     * @param argValueMap        保存参数与值的映射
+     * @return 未命中缓存的参数
+     */
     private Collection<?> findInCaches(CacheAsMultiOperationContext context,
                                        Collection<?> subCacheAsMultiArg, Map<Object, Object> argValueMap) {
 
@@ -276,11 +291,15 @@ public class EnhancedCachingInterceptor extends CacheInterceptor {
 
             missKeys.clear();
             Collection<Object> newMissCacheAsMultiArg = new ArrayList<>(missCacheAsMultiArg.size());
+            boolean strictNull = context.getMultiOperation().isStrictNull();
             missCacheAsMultiArg.forEach(argItem -> {
                 Object key = argKeyMap.get(argItem);
                 ValueWrapper valueWrapper = hitKeyValueWrapperMap.get(key);
                 if (valueWrapper != null) {
-                    argValueMap.put(argItem, valueWrapper.get());
+                    Object value = valueWrapper.get();
+                    if (value != null || strictNull) {
+                        argValueMap.put(argItem, value);
+                    }
                 } else {
                     newMissCacheAsMultiArg.add(argItem);
                     missKeys.add(key);
@@ -316,9 +335,9 @@ public class EnhancedCachingInterceptor extends CacheInterceptor {
         Object invokeValues = invokeOperation(firstContext, invoker, missCacheAsMultiArg);
 
         // 如果执行结果为null，缓存也没有任何命中，直接返回null
-        if (invokeValues == null && argValueMap.size() == 0) {
+        /*if (invokeValues == null && argValueMap.size() == 0) {
             return Pair.of(argValueMap, null);
-        }
+        }*/
 
         CacheAsMultiOperation<?> multiOperation = firstContext.getMultiOperation();
         Map<?, ?> missArgValueMap = multiOperation.makeCacheMap(missCacheAsMultiArg, invokeValues);
@@ -326,7 +345,11 @@ public class EnhancedCachingInterceptor extends CacheInterceptor {
         // 如果invokeValues是null或者空map，那missArgValueMap也是null或者空map
         if (!CollectionUtils.isEmpty(missArgValueMap)) {
             // 缓存数据
-            putCachedItems(contexts, missArgValueMap);
+            if (multiOperation.isStrictNull()) {
+                putCachedItems(contexts, missArgValueMap);
+            } else {
+                putCachedItems(contexts, missCacheAsMultiArg, missArgValueMap);
+            }
 
             // 如果缓存都未命中，直接返回执行结果
             if (argValueMap.size() == 0) {
@@ -334,14 +357,20 @@ public class EnhancedCachingInterceptor extends CacheInterceptor {
             }
 
             argValueMap.putAll(missArgValueMap);
+        } else if (!multiOperation.isStrictNull()) {
+            putCachedItems(contexts, missCacheAsMultiArg, Collections.emptyMap());
         }
 
         return Pair.of(argValueMap, multiOperation.makeReturnObject(firstContext.getCacheAsMultiArg(), argValueMap));
     }
 
     private void putCachedItems(Collection<CacheAsMultiOperationContext> contexts, Map<?, ?> argValueMap) {
+        putCachedItems(contexts, argValueMap.keySet(), argValueMap);
+    }
+
+    private void putCachedItems(Collection<CacheAsMultiOperationContext> contexts, Collection<?> subCacheAsMultiArg, Map<?, ?> argValueMap) {
         for (CacheAsMultiOperationContext context : contexts) {
-            Pair<Collection<?>, Collection<?>> pair = splitIsConditionPassing(context, argValueMap.keySet(), argValueMap);
+            Pair<Collection<?>, Collection<?>> pair = splitIsConditionPassing(context, subCacheAsMultiArg, argValueMap);
             if (pair.getLeft().isEmpty()) {
                 continue;
             }

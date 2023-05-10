@@ -11,7 +11,7 @@
 <dependency>
     <groupId>io.github.ms100</groupId>
     <artifactId>cache-as-multi</artifactId>
-    <version>1.1.3</version>
+    <version>1.2.0</version>
 </dependency>
 ```
 
@@ -254,9 +254,9 @@ Here are some examples:
    the `collection parameter`
    and other parameters to calculate the cache key using `KeyGenerator.generate(Object, Method, Object...)`; the same
    goes for custom `CacheKeyGenerator`.
-3. When used in conjunction with cache-generating annotations, if the return type of the method is `Map`, the value of
-   the corresponding `element` in the `Map` is `null`,
-   then `null` will be cached, and if the `element` does not exist in the `Map`, it will not be cached.
+3. When used in conjunction with `@Cacheable`,`@CacheResult` and `@CachePut`, if `CacheAsMulti.strictNull()`
+   is `true` and the return type of the method is `Map`, the value of the corresponding `element` in the `Map`
+   is `null`, then `null` will be cached, and if the `element` does not exist in the `Map`, it will not be cached.
 4. When used in conjunction with `@CachePut` and `@CacheEvict`, if the key parameter of the annotation is configured
    with `#result`,
    and the return type of the method is `Map`, `null` will be used as the default value to calculate the cache key and

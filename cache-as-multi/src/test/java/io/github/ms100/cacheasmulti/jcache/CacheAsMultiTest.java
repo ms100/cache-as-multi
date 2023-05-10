@@ -1,6 +1,7 @@
 package io.github.ms100.cacheasmulti.jcache;
 
 import io.github.ms100.cacheasmulti.cache.service.FarService;
+import io.github.ms100.cacheasmulti.jcache.service.BagService;
 import io.github.ms100.cacheasmulti.jcache.service.DemoService;
 import io.github.ms100.cacheasmulti.jcache.service.FooService;
 import lombok.SneakyThrows;
@@ -8,10 +9,9 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.cache.annotation.EnableCaching;
-import org.springframework.core.Ordered;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -25,13 +25,12 @@ import java.util.Set;
 class CacheAsMultiTest {
     @Autowired
     private FooService fooService;
-
     @Autowired
     private DemoService demoService;
-
     @Autowired
     private FarService farService;
-
+    @Autowired
+    private BagService bagService;
     private final Integer id = 12;
 
     private final List<Integer> idList = new ArrayList<Integer>() {{
@@ -103,5 +102,29 @@ class CacheAsMultiTest {
         demoService.delMultiDemo(idList, "a");
         demoService.getDemo(id, "a");
         System.out.println(demoService.getMultiDemo(idList, "a"));
+    }
+
+    @Test
+    void getMultiBag() {
+        bagService.delMultiBag(ids);
+        bagService.getMultiBag(ids);
+        bagService.getMultiBag(ids);
+        bagService.getMultiBag(ids);
+        Set<Integer> ids2 = new HashSet<>(Arrays.asList(1, 3, 5, 7));
+        bagService.delMultiBag(ids2);
+        System.out.println(bagService.getMultiBag(ids2));
+        System.out.println(bagService.getMultiBag(ids2));
+    }
+
+    @Test
+    void getMultiBag2() {
+        bagService.delMultiBag2(ids, "a");
+        bagService.getMultiBag2(ids, "a");
+        bagService.getMultiBag2(ids, "a");
+        bagService.getMultiBag2(ids, "a");
+        Set<Integer> ids2 = new HashSet<>(Arrays.asList(1, 3, 5, 7));
+        bagService.delMultiBag2(ids2, "a");
+        System.out.println(bagService.getMultiBag2(ids2, "a"));
+        System.out.println(bagService.getMultiBag2(ids2, "a"));
     }
 }

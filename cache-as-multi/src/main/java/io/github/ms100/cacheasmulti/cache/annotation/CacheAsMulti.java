@@ -180,7 +180,7 @@ import java.lang.reflect.Method;
  * <ol>
  *     <li>@CacheAsMulti 注解不能替代 Spring 缓存注解中的 key 参数，例如：{@link Cacheable#key()}，也不能替代 {@link javax.cache.annotation.CacheKey @CacheKey}、{@link javax.cache.annotation.CacheValue @CacheValue} 注解。</li>
  *     <li>如果使用自定义的 {@link KeyGenerator}，则会用【对象集合参数】的每个【元素】和其他参数组成 Object[] 传入 {@link KeyGenerator#generate(Object, Method, Object...)} 计算缓存 key；自定义的 {@link javax.cache.annotation.CacheKeyGenerator CacheKeyGenerator} 也一样。</li>
- *     <li>与生成缓存的注解搭配使用时，若方法的返回类型是 Map，【元素】在 Map 中对应的值为 null 就会缓存 null，【元素】在 Map 中不存在就不缓存。</li>
+ *     <li>与 @Cacheable、@CacheResult、@CachePut 注解搭配使用时，若 {@link CacheAsMulti#strictNull()} 为 true 且方法的返回类型是 Map，【元素】在 Map 中对应的值为 null 就会缓存 null，【元素】在 Map 中不存在就不缓存。</li>
  *     <li>与 {@link CachePut} 和 {@link CacheEvict} 搭配，注解的 key 参数配置了 #result 时，若方法的返回类型是 Map，对于 Map 中不存在的【元素】会使用 null 作为缺省值来计算缓存 key 和 condition、unless 条件。</li>
  *     <li>{@link Cacheable#condition()}、{@link Cacheable#unless()} 等条件表达式是用【对象集合参数】中的每个【元素】分别计算，只将不符合的【元素】排除，而不是整个集合。</li>
  * </ol>
@@ -190,7 +190,14 @@ import java.lang.reflect.Method;
 @Target(ElementType.PARAMETER)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface CacheAsMulti {
-
+    /**
+     * 严格的缓存数据为 null 的策略
+     * 为 false 时，返回值 map 中未包含的参数项都会被缓存为 null；为 ture 时，返回值 map 中包含的为 null 的参数项才会被缓存为 null
+     * 例如：参数传入 List[1,2,3]，返回 Map{1:"A",3:"C"}。当为 false 时，2 会被缓存为 null；当为 true 时，2 不会被缓存。
+     *
+     * @return 默认为 false，如果方法返回值Map里会包含为 null 的元素，请将此值设置为 true
+     */
+    boolean strictNull() default false;
 }
 
 

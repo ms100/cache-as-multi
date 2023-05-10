@@ -10,7 +10,7 @@
 <dependency>
   <groupId>io.github.ms100</groupId>
   <artifactId>cache-as-multi</artifactId>
-  <version>1.1.3</version>
+  <version>1.2.0</version>
 </dependency>
 ```
 
@@ -215,10 +215,14 @@ class FooService {
   ```
 
 ### 总结和补充
-1. `@CacheAsMulti` 注解不能替代 Spring 缓存注解中的 key 参数，例如：`@Cacheable.key()`，也不能替代 `@CacheKey`、`@CacheValue` 注解。
-2. 如果使用自定义的 `KeyGenerator`，则会用【对象集合参数】的每个【元素】和其他参数组成 `Object[]` 传入 `KeyGenerator.generate(Object, Method, Object...)` 计算缓存 key；自定义的 `CacheKeyGenerator` 也一样。
-3. 与生成缓存的注解搭配使用时，若方法的返回类型是 `Map`，【元素】在 `Map` 中对应的值为 `null` 就会缓存 `null`，【元素】在 `Map` 中不存在就不缓存。
-4. 与 `@CachePut` 和 `@CacheEvict` 搭配，注解的 key 参数配置了 `#result` 时，若方法的返回类型是 `Map`，对于 `Map` 中不存在的【元素】会使用 `null` 作为缺省值来计算缓存 key 和 condition、unless 条件。
+1. `@CacheAsMulti` 注解不能替代 Spring 缓存注解中的 key 参数，例如：`@Cacheable.key()`
+   ，也不能替代 `@CacheKey`、`@CacheValue` 注解。
+2. 如果使用自定义的 `KeyGenerator`，则会用【对象集合参数】的每个【元素】和其他参数组成 `Object[]`
+   传入 `KeyGenerator.generate(Object, Method, Object...)` 计算缓存 key；自定义的 `CacheKeyGenerator` 也一样。
+3. 与 `@Cacheable`、`@CacheResult`、`@CachePut` 注解搭配使用时，若 `CacheAsMulti.strictNull()` 为 `true`
+   且方法的返回类型是 `Map`，【元素】在 `Map` 中对应的值为 `null` 就会缓存 `null`，【元素】在 `Map` 中不存在就不缓存。
+4. 与 `@CachePut` 和 `@CacheEvict` 搭配，注解的 key 参数配置了 `#result` 时，若方法的返回类型是 `Map`，对于 `Map`
+   中不存在的【元素】会使用 `null` 作为缺省值来计算缓存 key 和 condition、unless 条件。
 5. `@Cacheable.condition()`、`@Cacheable.unless()` 等条件表达式是用【对象集合参数】中的每个【元素】分别计算，只将不符合的【元素】排除，而不是整个集合。
 
 ## 缓存接口及转换

@@ -12,6 +12,8 @@ spring:
           foo: PT15S
           demo: PT5M
           newBar: PT1M
+          box: PT1M
+          bag: PT1M
 
 logging:
   level:

@@ -51,6 +51,10 @@ public abstract class AbstractCacheAsMultiOperation {
         return parameterDetail.getPosition();
     }
 
+    public boolean isStrictNull() {
+        return parameterDetail.isStrictNull();
+    }
+
     public Collection<?> newCacheAsMultiArg(Collection<?> subCacheAsMultiArg) {
         assert cacheAsMultiArgCreator != null;
         return cacheAsMultiArgCreator.apply(subCacheAsMultiArg);
