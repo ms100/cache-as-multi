@@ -3,12 +3,14 @@ package io.github.ms100.cacheasmulti.cache.interceptor;
 import io.github.ms100.cacheasmulti.cache.annotation.CacheAsMultiParameterDetail;
 import lombok.Getter;
 import org.springframework.core.ResolvableType;
+import org.springframework.expression.spel.support.SimpleEvaluationContext;
 import org.springframework.lang.Nullable;
 import org.springframework.util.CollectionUtils;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -60,13 +62,12 @@ public abstract class AbstractCacheAsMultiOperation {
         return cacheAsMultiArgCreator.apply(subCacheAsMultiArg);
     }
 
-    @Nullable
     public Map<?, ?> makeCacheMap(Collection<?> subCacheAsMultiArg, @Nullable Object invokeValues) {
         if (returnTypeMaker == null) {
             return null;
         }
 
-        return returnTypeMaker.makeCacheMap(subCacheAsMultiArg, invokeValues);
+        return returnTypeMaker.makeCacheMap(parameterDetail, subCacheAsMultiArg, invokeValues);
     }
 
     @Nullable
@@ -75,7 +76,7 @@ public abstract class AbstractCacheAsMultiOperation {
             return null;
         }
 
-        return returnTypeMaker.makeReturnObject(cacheAsMultiArg, argValueMap);
+        return returnTypeMaker.makeReturnObject(parameterDetail, cacheAsMultiArg, argValueMap);
     }
 
     @Nullable
@@ -90,7 +91,7 @@ public abstract class AbstractCacheAsMultiOperation {
     }
 
     @Nullable
-    protected static ReturnTypeMaker initializeReturnTypeMaker(Method method, CacheAsMultiParameterDetail parameterDetail) {
+    protected static ReturnTypeMaker<?> initializeReturnTypeMaker(Method method, CacheAsMultiParameterDetail parameterDetail) {
         ResolvableType returnResolvableType = ResolvableType.forMethodReturnType(method);
 
         Class<?> returnType = returnResolvableType.toClass();
@@ -117,79 +118,130 @@ public abstract class AbstractCacheAsMultiOperation {
         return null;
     }
 
-    private interface ReturnTypeMaker {
+    private interface ReturnTypeMaker<T> {
 
         /**
          * 处理缓存miss的数据
          *
+         * @param parameterDetail    参数详情
          * @param subCacheAsMultiArg 参数集合
          * @param invokeValues       方法返回结果
          * @return 缓存map
          */
-        @Nullable
-        Map<?, ?> makeCacheMap(Collection<?> subCacheAsMultiArg, @Nullable Object invokeValues);
+        Map<?, ?> makeCacheMap(CacheAsMultiParameterDetail parameterDetail,
+                               Collection<?> subCacheAsMultiArg, @Nullable T invokeValues);
 
         /**
          * 处理返回结果
          *
+         * @param parameterDetail 参数详情
          * @param cacheAsMultiArg 参数集合
          * @param argValueMap     单个参数与其结果映射的map
          * @return 结果对象
          */
         @Nullable
-        Object makeReturnObject(Collection<?> cacheAsMultiArg, Map<?, ?> argValueMap);
+        T makeReturnObject(CacheAsMultiParameterDetail parameterDetail,
+                           Collection<?> cacheAsMultiArg, Map<?, ?> argValueMap);
     }
 
-    private static class ListReturnTypeMaker implements ReturnTypeMaker {
-
+    private static class ListReturnTypeMaker implements ReturnTypeMaker<List<?>> {
+        private static final SimpleEvaluationContext.Builder CONTEXT_BUILDER = SimpleEvaluationContext.forReadOnlyDataBinding();
         @Getter
-        private static final ReturnTypeMaker instance = new ListReturnTypeMaker();
+        private static final ReturnTypeMaker<List<?>> instance = new ListReturnTypeMaker();
 
         @Override
-        @Nullable
-        public Map<?, ?> makeCacheMap(Collection<?> subCacheAsMultiArg, @Nullable Object invokeValues) {
-            List<?> list = (List<?>) invokeValues;
-            // 关于返回值是 List，那么 List 的长度必须等于参数 List 的长度
-            if (list == null) {
-                return null;
+        public Map<?, ?> makeCacheMap(CacheAsMultiParameterDetail parameterDetail,
+                                      Collection<?> subCacheAsMultiArg, @Nullable List<?> invokeValues) {
+            if (CollectionUtils.isEmpty(invokeValues)) {
+                if (parameterDetail.isStrictNull()) {
+                    return Collections.emptyMap();
+                }
+                Map<Object, Object> map = CollectionUtils.newHashMap(subCacheAsMultiArg.size());
+                for (Object o : subCacheAsMultiArg) {
+                    map.put(o, null);
+                }
+                return map;
             }
-            if (list.size() != subCacheAsMultiArg.size()) {
-                throw new IllegalStateException("The size of return list is not equal to the size of parameter list");
+            // 如果 asResult 为空，那么 List 的长度必须等于参数 List 的长度
+            if (parameterDetail.getAsElementFieldExpression() == null) {
+                if (invokeValues.size() != subCacheAsMultiArg.size()) {
+                    throw new IllegalStateException("The size of return list is not equal to the size of parameter list");
+                }
+                Map<Object, Object> map = CollectionUtils.newHashMap(subCacheAsMultiArg.size());
+                Iterator<?> iterator = invokeValues.iterator();
+                subCacheAsMultiArg.forEach((argItem) -> {
+                    map.put(argItem, iterator.next());
+                });
+                return map;
             }
             Map<Object, Object> map = CollectionUtils.newHashMap(subCacheAsMultiArg.size());
-            Iterator<?> iterator = list.iterator();
-            subCacheAsMultiArg.forEach((argItem) -> {
-                map.put(argItem, iterator.next());
+            invokeValues.forEach(i -> {
+                SimpleEvaluationContext context = CONTEXT_BUILDER.withRootObject(i).build();
+                map.put(parameterDetail.getAsElementFieldExpression().getValue(context), i);
             });
+            if (!parameterDetail.isStrictNull() && map.size() != subCacheAsMultiArg.size()) {
+                subCacheAsMultiArg.forEach((argItem) -> {
+                    map.putIfAbsent(argItem, null);
+                });
+            }
             return map;
         }
 
         @Override
         @Nullable
-        public Object makeReturnObject(Collection<?> cacheAsMultiArg, Map<?, ?> argValueMap) {
+        public List<?> makeReturnObject(CacheAsMultiParameterDetail parameterDetail,
+                                        Collection<?> cacheAsMultiArg, Map<?, ?> argValueMap) {
             List<Object> res = new ArrayList<>(cacheAsMultiArg.size());
-            cacheAsMultiArg.forEach(argItem -> res.add(argValueMap.get(argItem)));
+            if (parameterDetail.getAsElementFieldExpression() == null || parameterDetail.isStrictNull()) {
+                cacheAsMultiArg.forEach(argItem -> res.add(argValueMap.get(argItem)));
+            } else {
+                cacheAsMultiArg.forEach(argItem -> {
+                    if (argValueMap.get(argItem) != null) {
+                        res.add(argValueMap.get(argItem));
+                    }
+                });
+            }
             return res;
         }
     }
 
-    private static class MapReturnTypeMaker implements ReturnTypeMaker {
+    private static class MapReturnTypeMaker implements ReturnTypeMaker<Map<?, ?>> {
 
         @Getter
-        private static final ReturnTypeMaker instance = new MapReturnTypeMaker();
+        private static final ReturnTypeMaker<Map<?, ?>> instance = new MapReturnTypeMaker();
 
         @Override
-        @Nullable
-        public Map<?, ?> makeCacheMap(Collection<?> subCacheAsMultiArg, @Nullable Object invokeValues) {
-            if (invokeValues == null) {
-                return null;
+        public Map<?, ?> makeCacheMap(CacheAsMultiParameterDetail parameterDetail,
+                                      Collection<?> subCacheAsMultiArg, @Nullable Map<?, ?> invokeValues) {
+            if (CollectionUtils.isEmpty(invokeValues)) {
+                if (parameterDetail.isStrictNull()) {
+                    return Collections.emptyMap();
+                }
+                Map<Object, Object> map = CollectionUtils.newHashMap(subCacheAsMultiArg.size());
+                for (Object o : subCacheAsMultiArg) {
+                    map.put(o, null);
+                }
+                return map;
             }
-            return (Map<?, ?>) invokeValues;
+
+            if (parameterDetail.isStrictNull() || invokeValues.size() == subCacheAsMultiArg.size()) {
+                return invokeValues;
+            }
+
+            Map<Object, Object> map = CollectionUtils.newHashMap(subCacheAsMultiArg.size());
+            for (Object o : subCacheAsMultiArg) {
+                map.put(o, invokeValues.get(o));
+            }
+            return map;
         }
 
         @Override
         @Nullable
-        public Object makeReturnObject(Collection<?> cacheAsMultiArg, Map<?, ?> argValueMap) {
+        public Map<?, ?> makeReturnObject(CacheAsMultiParameterDetail parameterDetail,
+                                          Collection<?> cacheAsMultiArg, Map<?, ?> argValueMap) {
+            if (!parameterDetail.isStrictNull()) {
+                argValueMap.entrySet().removeIf(e -> e.getValue() == null);
+            }
             return argValueMap;
         }
     }

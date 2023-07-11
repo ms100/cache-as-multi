@@ -85,14 +85,10 @@ class CacheResultAsMultiInterceptor extends AbstractJCacheAsMultiInterceptor<Cac
             missCacheAsMultiArg = cacheAsMultiArg;
         } else {
             Collection<Object> newMissCacheAsMultiArg = new ArrayList<>(cacheAsMultiArg.size());
-            boolean strictNull = multiOperation.isStrictNull();
             argKeyMap.forEach((argItem, key) -> {
                 ValueWrapper valueWrapper = hitKeyValueWrapperMap.get(key);
                 if (valueWrapper != null) {
-                    Object value = valueWrapper.get();
-                    if (value != null || strictNull) {
-                        argValueMap.put(argItem, value);
-                    }
+                    argValueMap.put(argItem, valueWrapper.get());
                 } else {
                     newMissCacheAsMultiArg.add(argItem);
                 }
@@ -112,24 +108,13 @@ class CacheResultAsMultiInterceptor extends AbstractJCacheAsMultiInterceptor<Cac
         checkForCachedException(context, missCacheAsMultiArg);
 
         Object invokeValues = invokeOperation(context, invoker, missCacheAsMultiArg);
-
-        // 如果执行结果为null，缓存也没有任何命中，直接返回null
-        /*if (invokeValues == null && argValueMap.size() == 0) {
-            return null;
-        }*/
-
         CacheResultAsMultiOperation multiOperation = context.getMultiOperation();
         Map<?, ?> missArgValueMap = multiOperation.makeCacheMap(missCacheAsMultiArg, invokeValues);
 
         if (!CollectionUtils.isEmpty(missArgValueMap)) {
             // 需要缓存的数据
             Map<Object, Object> missKeyValueMap = CollectionUtils.newHashMap(missCacheAsMultiArg.size());
-            // 关于值不存在的参数，invoke返回的结果中值为null就缓存null，不存在就不缓存。
-            if (multiOperation.isStrictNull()) {
-                missArgValueMap.forEach((argItem, value) -> missKeyValueMap.put(context.generateKey(argItem), value));
-            } else {
-                missCacheAsMultiArg.forEach(argItem -> missKeyValueMap.put(context.generateKey(argItem), missArgValueMap.get(argItem)));
-            }
+            missArgValueMap.forEach((argItem, value) -> missKeyValueMap.put(context.generateKey(argItem), value));
             EnhancedCache cache = resolveCache(context);
             // 缓存数据
             doMultiPut(cache, missKeyValueMap);
@@ -140,13 +125,6 @@ class CacheResultAsMultiInterceptor extends AbstractJCacheAsMultiInterceptor<Cac
             }
 
             argValueMap.putAll(missArgValueMap);
-        } else if (!multiOperation.isStrictNull()) {
-            // 需要缓存的数据
-            Map<Object, Object> missKeyValueMap = CollectionUtils.newHashMap(missCacheAsMultiArg.size());
-            missCacheAsMultiArg.forEach(argItem -> missKeyValueMap.put(context.generateKey(argItem), null));
-            EnhancedCache cache = resolveCache(context);
-            // 缓存数据
-            doMultiPut(cache, missKeyValueMap);
         }
 
         Collection<?> cacheAsMultiArg = (Collection<?>) context.getCacheAsMultiArg();

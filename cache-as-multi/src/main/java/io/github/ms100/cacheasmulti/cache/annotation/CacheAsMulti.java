@@ -38,7 +38,7 @@ import java.lang.reflect.Method;
  * 获取批量对象的方法相对于获取单个对象的方法会有两点变化：
  * <ol>
  *     <li>入参从单个对象(以下称【对象参数】)变为对象集合(以下称【对象集合参数】)，例如 Integer 变为 Collection&lt;Integer&gt; 或 Set&lt;Integer&gt; 或 List&lt;Integer&gt;。</li>
- *     <li>返回值从单个对象变为 Map&lt;K,V&gt; 或者 List&lt;V&gt; 。例如 Map&lt;Integer,Foo&gt; 或 List&lt;Foo&gt;，若返回的是 List，那应与【对象集合参数】大小相同并顺序一致。</li>
+ *     <li>返回值从单个对象变为 Map&lt;K,V&gt; 或者 List&lt;V&gt; 。例如 Map&lt;Integer,Foo&gt; 或 List&lt;Foo&gt;，若返回的是 List，那应与【对象集合参数】大小相同并顺序一致（v1.3以前）。</li>
  * </ol>
  * <p>
  * 在上面例子中，如果需要对获取单个对象的方法做缓存，会使用 {@link Cacheable @Cacheable} 或 {@link javax.cache.annotation.CacheResult @CacheResult} 注解：
@@ -198,6 +198,14 @@ public @interface CacheAsMulti {
      * @return 默认为 false，如果方法返回值Map里会包含为 null 的元素，请将此值设置为 true
      */
     boolean strictNull() default false;
+
+    /**
+     * 当方法返回的是 List 时，如果顺序无法保证，可以以此来指定【对象集合参数】的元素对应返回 List 的元素的字段名（使用 . 取下层），此时 List 的大小不必与【对象集合参数】相同。
+     * 例如：返回List&lt;Foo&gt;，此处可以是：Foo的字段名.下级字段名
+     *
+     * @return 字段名
+     */
+    String asElementField() default "";
 }
 
 

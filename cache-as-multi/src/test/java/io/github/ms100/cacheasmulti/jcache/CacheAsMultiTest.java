@@ -2,6 +2,7 @@ package io.github.ms100.cacheasmulti.jcache;
 
 import io.github.ms100.cacheasmulti.cache.service.FarService;
 import io.github.ms100.cacheasmulti.jcache.service.BagService;
+import io.github.ms100.cacheasmulti.jcache.service.CarService;
 import io.github.ms100.cacheasmulti.jcache.service.DemoService;
 import io.github.ms100.cacheasmulti.jcache.service.FooService;
 import lombok.SneakyThrows;
@@ -31,6 +32,8 @@ class CacheAsMultiTest {
     private FarService farService;
     @Autowired
     private BagService bagService;
+    @Autowired
+    private CarService carService;
     private final Integer id = 12;
 
     private final List<Integer> idList = new ArrayList<Integer>() {{
@@ -126,5 +129,14 @@ class CacheAsMultiTest {
         bagService.delMultiBag2(ids2, "a");
         System.out.println(bagService.getMultiBag2(ids2, "a"));
         System.out.println(bagService.getMultiBag2(ids2, "a"));
+    }
+
+    @Test
+    void getCars() {
+        carService.deleteCars(idList, "法拉利");
+        List<CarService.Car> cars = carService.getCars(idList, "法拉利");
+        System.out.println(cars);
+        cars = carService.getCars(idList, "法拉利");
+        System.out.println(cars);
     }
 }

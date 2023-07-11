@@ -1,6 +1,7 @@
 package io.github.ms100.cacheasmulti.cache;
 
 import io.github.ms100.cacheasmulti.cache.service.BoxService;
+import io.github.ms100.cacheasmulti.cache.service.BusService;
 import io.github.ms100.cacheasmulti.cache.service.FarService;
 import io.github.ms100.cacheasmulti.cache.service.NewBarServiceImpl;
 import org.junit.jupiter.api.Assertions;
@@ -25,7 +26,8 @@ class CacheAsMultiTest {
     private FarService farService;
     @Autowired
     private BoxService boxService;
-
+    @Autowired
+    private BusService busService;
     private final Integer id = 3;
 
     private final List<Integer> idList = new ArrayList<Integer>() {{
@@ -155,5 +157,14 @@ class CacheAsMultiTest {
         boxService.delMultiBox2(ids, "a");
         boxService.putMultiBox2(ids, "a");
         boxService.getMultiBox2(ids, "a");
+    }
+
+    @Test
+    void getBuss() {
+        busService.deleteBuss(idList, "法拉利");
+        List<BusService.Bus> buss = busService.getBuss(idList, "法拉利");
+        System.out.println(buss);
+        buss = busService.getBuss(idList, "法拉利");
+        System.out.println(buss);
     }
 }

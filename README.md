@@ -8,12 +8,37 @@
 ```xml
 
 <dependency>
-  <groupId>io.github.ms100</groupId>
-  <artifactId>cache-as-multi</artifactId>
-  <version>1.2.0</version>
+   <groupId>io.github.ms100</groupId>
+   <artifactId>cache-as-multi</artifactId>
+   <version>1.3.0</version>
 </dependency>
 ```
 
+## 最近更新
+
+### v1.3
+
+若批量方法返回的 List 不能保证与【对象集合参数】大小相同并顺序一致时，可以使用 `@CacheAsMulti.asElementField`
+指定【对象集合参数】的元素在 List 的元素中所在的字段。这将更适合数据库查询。
+
+```java
+class CarService {
+   @Cacheable(cacheNames = "car")
+   @CacheResult(cacheName = "car")
+   public List<CarPO> findCars(@CacheAsMulti(asElementField = "info.id") List<Integer> ids) {
+      // 返回值 List 的大小不必与 ids 相同
+   }
+
+   public static class CarPO {
+      private CarInfoPO info;
+      private String name;
+   }
+
+   public static class CarInfoPO {
+      private Integer id;
+   }
+}
+```
 
 ## 使用
 
@@ -42,28 +67,34 @@ class FooService {
 ```java
 class FooService {
     public Map<Integer, Foo> getMultiFoo(Collection<Integer> fooIds) {
-        //...
+       //...
     }
-  
-    public List<Foo> getMultiFoo(List<Integer> fooIds) {
-        //...
-    }
+
+   public List<Foo> getMultiFoo(List<Integer> fooIds) {
+      //...
+   }
 }
 ```
 
 获取批量对象的方法相对于获取单个对象的方法会有两点变化：
-1. 入参从单个对象(以下称【对象参数】)变为对象集合(以下称【对象集合参数】)，例如 `Integer` 变为 `Collection<Integer>` 或 `Set<Integer>` 或 `List<Integer>`。
-2. 返回值从单个对象变为 `Map<K,V>` 或者 `List<V>` 。例如 `Map<Integer,Foo>` 或 `List<Foo>`，若返回的是 `List` 类型，那应与【对象集合参数】大小相同并顺序一致。
+
+1. 入参从单个对象(以下称【对象参数】)变为对象集合(以下称【对象集合参数】)，例如 `Integer` 变为 `Collection<Integer>`
+   或 `Set<Integer>` 或 `List<Integer>`。
+2. 返回值从单个对象变为 `Map<K,V>` 或者 `List<V>` 。例如 `Map<Integer,Foo>` 或 `List<Foo>`，若返回的是 `List`
+   类型，那应与【对象集合参数】大小相同并顺序一致（PS: v1.3版本之后不再有此限制，详见[更新细节](#v13)）。
 
 #### 加缓存
-在上面例子中，如果需要对获取单个对象的方法做缓存，会使用 `@Cacheable` 或 `@CacheResult` 注解： (PS: 这里将 `@CacheResult` 和 `@Cacheable` 放在一起举例子，实际使用时通常只用其中的一个)
+
+在上面例子中，如果需要对获取单个对象的方法做缓存，会使用 `@Cacheable` 或 `@CacheResult` 注解： (PS: 这里将 `@CacheResult`
+和 `@Cacheable` 放在一起举例子，实际使用时通常只用其中的一个)
+
 ```java
 class FooService {
-    @Cacheable(cacheNames = "foo")
-    @CacheResult(cacheName = "foo")
-    public Foo getFoo(Integer fooId) {
-        // 用 fooId 生成缓存 key 和计算 condition、unless 条件，用 Foo 为缓存值
-    }
+   @Cacheable(cacheNames = "foo")
+   @CacheResult(cacheName = "foo")
+   public Foo getFoo(Integer fooId) {
+      // 用 fooId 生成缓存 key 和计算 condition、unless 条件，用 Foo 为缓存值
+   }
 }
 ```
 
@@ -72,149 +103,55 @@ class FooService {
 但通常我们会希望它能变为多个 `fooId => Foo` 的缓存，即：使用【对象集合参数】中每个【元素】和它对应的值分别作缓存。**此时只需要在【对象集合参数】上加上 @CacheAsMulti 注解即可实现我们想要的缓存方式。**
 ```java
 class FooService {
-    @Cacheable(cacheNames = "foo")
-    @CacheResult(cacheName = "foo")
-    public Map<Integer, Foo> getMultiFoo(@CacheAsMulti Collection<Integer> fooIds) {
+   @Cacheable(cacheNames = "foo")
+   @CacheResult(cacheName = "foo")
+   public Map<Integer, Foo> getMultiFoo(@CacheAsMulti Collection<Integer> fooIds) {
       // 为 fooIds 集合中每个元素分别生成缓存 key 和计算 condition、unless 条件，用 Map 中对应的值作为缓存值
-    }
-  
-    @Cacheable(cacheNames = "foo")
-    @CacheResult(cacheName = "foo")
-    public List<Foo> getMultiFoo(@CacheAsMulti List<Integer> fooIds) {
+   }
+
+   @Cacheable(cacheNames = "foo")
+   @CacheResult(cacheName = "foo")
+   public List<Foo> getMultiFoo(@CacheAsMulti List<Integer> fooIds) {
       // 为 fooIds 集合中每个元素分别生成缓存 key 和计算 condition、unless 条件，用 List 中对应的值作为缓存值
       // 之后的例子中，返回 List 和 返回 Map 的处理方式都一样，就不再单独举例
-    }
+   }
 }
 ```
 
-#### 当方法有多个参数时
-示例如下：
-
-* 使用 `@Cacheable` 时 `@Cacheable.key()` 未配置【或】使用 `@CacheResult` 时参数中没有 `@CacheKey`
-  ```java
-  class FooService {
-      @Cacheable(cacheNames = "foo", key="")
-      @CacheResult(cacheName = "foo")
-      public Foo getFoo(Integer fooId, String arg1) {
-          // 用 fooId 和 arg1 两个参数生成缓存的 key，用返回值作为缓存值
-      }
-  
-      @Cacheable(cacheNames = "foo", key="")
-      @CacheResult(cacheName = "foo")
-      public Map<Integer, Foo> getMultiFoo(@CacheAsMulti Collection<Integer> fooIds, String arg1) {
-          // 用 fooIds 中的每个【元素】分别和 arg1 参数生成缓存的 key，用返回 Map 中【元素】对应的值作为缓存值
-      }
-  }
-  ```
-
-* 使用 `@Cacheable` 时 `@Cacheable.key()` 只配置了【对象参数】的引用【或】使用 `@CacheResult` 时只有【对象参数】上有 `@CacheKey`
-  ```java
-  class FooService {
-      @Cacheable(cacheNames = "foo", key="#fooId")
-      @CacheResult(cacheName = "foo")
-      public Foo getFoo(@CacheKey Integer fooId, String arg1) {
-          // 用 fooId 生成缓存的 key，用返回值作为缓存值
-      }
-  
-      @Cacheable(cacheNames = "foo", key="#fooIds")
-      @CacheResult(cacheName = "foo")
-      public Map<Integer, Foo> getMultiFoo(@CacheAsMulti @CacheKey Collection<Integer> fooIds, String arg1) {
-          // 用 fooIds 中的每个【元素】分别生成缓存的 key，用返回 Map 中【元素】对应的值作为缓存值
-      }
-  }
-  ```
-
-* 使用 `@Cacheable` 时 `@Cacheable.key()` 配置了若干参数的引用【或】使用 `@CacheResult` 时参数中有若干 `@CacheKey`
-  ```java
-  class FooService {
-      @Cacheable(cacheNames = "foo", key="#fooId+#arg1")
-      @CacheResult(cacheName = "foo")
-      public Foo getFoo(@CacheKey Integer fooId, @CacheKey String arg1,  Float arg2) {
-          // 用 fooId 和 arg1 两个参数生成缓存的 key，用返回值作为缓存值
-      }
-  
-      @Cacheable(cacheNames = "foo", key="#fooIds+#arg1")
-      @CacheResult(cacheName = "foo")
-      public Map<Integer, Foo> getMultiFoo(@CacheAsMulti @CacheKey Collection<Integer> fooIds, @CacheKey String arg1,  Float arg2) {
-          // 用 fooIds 中的每个【元素】分别和 arg1 参数生成缓存的 key，用返回 Map 中【元素】对应的值作为缓存值
-          // 注意此时【对象集合参数】需要在 Cacheable.key() 中，需要有 @CacheKey 注解
-      }
-  }
-  ```
+[更多示例](./MORE-EXAMPLES.md#cacheable-和-cacheresult-的更多示例)
 
 ### 与其他注解搭配使用时的说明
+
 * 与 Spring 的 `@CachePut` 搭配时，同样符合上面的例子。
-* 与 `@CacheEvict` 搭配时，若注解的 `@CacheEvict.key()` 参数中没有 `#result`，对【方法】返回类型无要求；若 key 中有 `#result`，【方法】返回类型需要是 `Map` 或 `List`。
+* 与 `@CacheEvict` 搭配时，若注解的 `@CacheEvict.key()` 参数中没有 `#result`，对【方法】返回类型无要求；若 key 中有 `#result`
+  ，【方法】返回类型需要是 `Map` 或 `List`。
 * 与 Spring 的 `@CachePut`、`@CacheEvict` 搭配，若 key 参数中已有 `#result`， 则可以没有【对象集合参数】的引用。
 * 与 `@CacheRemove` 搭配时，对【方法】返回类型无要求。
 * 与 JSR-107 的 `@CachePut` 搭配时，对【方法】返回类型无要求，可参照下面的示例：
 
-###  JSR-107 的 @CachePut
-* 单个参数做key，未配置 `@CacheKey`：
-  ```java
-  class FooService {
-      @CachePut(cacheName = "foo")
-      public void putFoo(Integer fooId, @CacheValue String value) {
-          // 用 fooId 参数生成缓存的 key，用 value 作为缓存值
-      }
-  
-      @CachePut(cacheName = "foo")
-      public void putMultiFoo(@CacheAsMulti @CacheValue Map  fooIdValueMap) {
-          // 此时方法的 @CacheValue 参数必须为 Map 类型
-          // 用 fooIdValueMap 中的每个 Entry 的 key 分别生成缓存的 key，用 Entry 的 value 作为缓存值
-      }
-  }
+### JSR-107 的 @CachePut
+
+单个参数做key，未配置 `@CacheKey`：
+
+```java
+class FooService {
+   @CachePut(cacheName = "foo")
+   public void putFoo(Integer fooId, @CacheValue String value) {
+      // 用 fooId 参数生成缓存的 key，用 value 作为缓存值
+   }
+
+   @CachePut(cacheName = "foo")
+   public void putMultiFoo(@CacheAsMulti @CacheValue Map<Integer, String> fooIdValueMap) {
+      // 此时方法的 @CacheValue 参数必须为 Map 类型
+      // 用 fooIdValueMap 中的每个 Entry 的 key 分别生成缓存的 key，用 Entry 的 value 作为缓存值
+   }
+}
   ```
 
-* 多个参数做key，未配置 `@CacheKey`：
-  ```java
-  class FooService {
-      @CachePut(cacheName = "foo")
-      public void putFoo(Integer fooId, String arg1, @CacheValue String value) {
-          // 用 fooId 和 arg1 两个参数生成缓存的 key，用 value 作为缓存值
-      }
-  
-      @CachePut(cacheName = "foo")
-      public void putMultiFoo(@CacheAsMulti @CacheValue Map fooIdValueMap, String arg1) {
-          // 此时方法的 @CacheValue 参数必须为 Map 类型
-          // 用 fooIdValueMap 中的每个 Entry 的 key 分别和 arg1 参数生成缓存的 key，用 Entry 的 value 作为缓存值
-      }
-  }
-  ```
-
-* 只有【对象参数】上有 `@CacheKey`：
-  ```java
-  class FooService {
-      @CachePut(cacheName = "foo")
-      public void putFoo(@CacheKey Integer fooId, String arg1, @CacheValue String value) {
-          // 用 fooId 参数生成缓存的 key，用 value 作为缓存值
-      }
-  
-      @CachePut(cacheName = "foo")
-      public void putMultiFoo(@CacheAsMulti @CacheKey @CacheValue Map fooIdValueMap, String arg1) {
-          // 此时方法的 @CacheValue 参数必须为 Map 类型
-          // 用 fooIdValueMap 中的每个 Entry 的 key 分别生成缓存的 key，用 Entry 的 value 作为缓存值
-      }
-  }
-  ```
-
-* 若干参数上有 `@CacheKey`：
-  ```java
-  class FooService {
-      @CachePut(cacheName = "foo")
-      public void putFoo(@CacheKey Integer fooId, @CacheKey String arg1, String arg2, @CacheValue String value) {
-          // 用 fooId 和 arg1 两个参数生成缓存的 key，用 value 作为缓存值
-      }
-  
-      @CachePut(cacheName = "foo")
-      public void putMultiFoo(@CacheAsMulti @CacheKey @CacheValue Map fooIdValueMap, @CacheKey String arg1, String arg2) {
-        // 此时方法的 @CacheValue 参数必须为 Map 类型
-        // 用 fooIdValueMap 中的每个 Entry 的 key 分别和 arg1 参数生成缓存的 key，用 Entry 的 value 作为缓存值
-      }
-  }
-  ```
+[更多示例](./MORE-EXAMPLES.md#jsr-107-的-cacheput-的更多示例)
 
 ### 总结和补充
+
 1. `@CacheAsMulti` 注解不能替代 Spring 缓存注解中的 key 参数，例如：`@Cacheable.key()`
    ，也不能替代 `@CacheKey`、`@CacheValue` 注解。
 2. 如果使用自定义的 `KeyGenerator`，则会用【对象集合参数】的每个【元素】和其他参数组成 `Object[]`
