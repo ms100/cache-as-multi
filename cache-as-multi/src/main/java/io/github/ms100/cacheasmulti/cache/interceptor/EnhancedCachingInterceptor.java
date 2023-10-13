@@ -214,7 +214,7 @@ public class EnhancedCachingInterceptor extends CacheInterceptor {
         CacheAsMultiOperation<?> multiOperation = firstContext.getMultiOperation();
         Collection<?> cacheAsMultiArg = contexts.getCacheAsMultiArg();
         assert cacheAsMultiArg != null;
-        Map<Object, Object> argValueMap = CollectionUtils.newHashMap(cacheAsMultiArg.size());
+        Map<Object, Object> argValueMap = new HashMap<>(cacheAsMultiArg.size());
 
         Collection<?> missCacheAsMultiArg = cacheAsMultiArg;
 
@@ -431,7 +431,7 @@ public class EnhancedCachingInterceptor extends CacheInterceptor {
     private Map<Object, Object> generateArgKeyMap(CacheAsMultiOperationContext context,
                                                   Collection<?> subCacheAsMultiArg) {
 
-        HashMap<Object, Object> argKeyMap = CollectionUtils.newHashMap(subCacheAsMultiArg.size());
+        HashMap<Object, Object> argKeyMap = new HashMap<>(subCacheAsMultiArg.size());
         for (Object argItem : subCacheAsMultiArg) {
             argKeyMap.put(argItem, context.generateKey(argItem, null));
         }
@@ -442,7 +442,7 @@ public class EnhancedCachingInterceptor extends CacheInterceptor {
     private Map<Object, Object> generateKeyValueMap(CacheAsMultiOperationContext context,
                                                     Collection<?> subCacheAsMultiArg, Map<?, ?> argValueMap) {
 
-        HashMap<Object, Object> keyValueMap = CollectionUtils.newHashMap(argValueMap.size());
+        HashMap<Object, Object> keyValueMap = new HashMap<>(argValueMap.size());
         for (Object argItem : subCacheAsMultiArg) {
             Object value = argValueMap.get(argItem);
             keyValueMap.put(context.generateKey(argItem, value), value);
@@ -604,8 +604,8 @@ public class EnhancedCachingInterceptor extends CacheInterceptor {
             this.multiOperation = multiOperation;
             this.superArgs = super.getArgs();
             this.cacheAsMultiArg = (Collection<?>) args[multiOperation.getCacheAsMultiParameterPosition()];
-            this.isConditionPassingCache = CollectionUtils.newHashMap(cacheAsMultiArg.size());
-            this.keyCache = CollectionUtils.newHashMap(cacheAsMultiArg.size());
+            this.isConditionPassingCache = new HashMap<>(cacheAsMultiArg.size());
+            this.keyCache = new HashMap<>(cacheAsMultiArg.size());
         }
 
         @Override

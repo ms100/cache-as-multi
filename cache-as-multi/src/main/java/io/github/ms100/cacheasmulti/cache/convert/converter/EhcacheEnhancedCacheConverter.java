@@ -7,10 +7,10 @@ import net.sf.ehcache.Element;
 import org.springframework.cache.ehcache.EhCacheCache;
 import org.springframework.cache.support.SimpleValueWrapper;
 import org.springframework.lang.Nullable;
-import org.springframework.util.CollectionUtils;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -34,7 +34,7 @@ public class EhcacheEnhancedCacheConverter implements EnhancedCacheConverter<EhC
         public Map<Object, ValueWrapper> multiGet(Collection<?> keys) {
             Map<Object, Element> map = getNativeCache().getAll(keys);
 
-            Map<Object, ValueWrapper> newMap = CollectionUtils.newHashMap(keys.size());
+            Map<Object, ValueWrapper> newMap = new HashMap<>(keys.size());
             map.forEach((key, value) -> newMap.put(key, toValueWrapper(value)));
 
             return newMap;

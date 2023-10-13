@@ -6,9 +6,9 @@ import io.github.ms100.cacheasmulti.cache.EnhancedCache;
 import lombok.SneakyThrows;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.springframework.cache.caffeine.CaffeineCache;
-import org.springframework.util.CollectionUtils;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -39,7 +39,7 @@ public class CaffeineEnhancedCacheConverter implements EnhancedCacheConverter<Ca
                 map = cache.getAllPresent(keys);
             }
 
-            Map<Object, ValueWrapper> newMap = CollectionUtils.newHashMap(keys.size());
+            Map<Object, ValueWrapper> newMap = new HashMap<>(keys.size());
             map.forEach((key, value) -> newMap.put(key, toValueWrapper(value)));
 
             return newMap;
@@ -47,7 +47,7 @@ public class CaffeineEnhancedCacheConverter implements EnhancedCacheConverter<Ca
 
         @Override
         public void multiPut(Map<?, ?> map) {
-            Map<Object, Object> newMap = CollectionUtils.newHashMap(map.size());
+            Map<Object, Object> newMap = new HashMap<>(map.size());
             map.forEach((key, value) -> newMap.put(key, toStoreValue(value)));
 
             getNativeCache().putAll(newMap);

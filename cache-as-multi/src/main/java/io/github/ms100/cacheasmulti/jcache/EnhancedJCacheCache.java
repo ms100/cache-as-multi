@@ -2,10 +2,10 @@ package io.github.ms100.cacheasmulti.jcache;
 
 import io.github.ms100.cacheasmulti.cache.EnhancedCache;
 import org.springframework.cache.jcache.JCacheCache;
-import org.springframework.util.CollectionUtils;
 
 import javax.cache.Cache;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 
@@ -28,7 +28,7 @@ public class EnhancedJCacheCache extends JCacheCache implements EnhancedCache {
     public Map<Object, ValueWrapper> multiGet(Collection<?> keys) {
         Map<Object, Object> map = getNativeCache().getAll(new HashSet<>(keys));
 
-        Map<Object, ValueWrapper> newMap = CollectionUtils.newHashMap(keys.size());
+        Map<Object, ValueWrapper> newMap = new HashMap<>(keys.size());
         map.forEach((key, value) -> newMap.put(key, toValueWrapper(value)));
 
         return newMap;
@@ -36,7 +36,7 @@ public class EnhancedJCacheCache extends JCacheCache implements EnhancedCache {
 
     @Override
     public void multiPut(Map<?, ?> map) {
-        Map<Object, Object> newMap = CollectionUtils.newHashMap(map.size());
+        Map<Object, Object> newMap = new HashMap<>(map.size());
         map.forEach((key, value) -> newMap.put(key, toStoreValue(value)));
 
         getNativeCache().putAll(newMap);

@@ -14,7 +14,6 @@ import org.springframework.cache.annotation.CachingConfigurationSelector;
 import org.springframework.core.convert.support.GenericConversionService;
 import org.springframework.lang.NonNull;
 import org.springframework.util.ClassUtils;
-import org.springframework.util.CollectionUtils;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -83,7 +82,7 @@ public class EnhancedCacheConversionService extends GenericConversionService imp
 
         @Override
         public Map<Object, ValueWrapper> multiGet(Collection<?> keys) {
-            HashMap<Object, ValueWrapper> map = CollectionUtils.newHashMap(keys.size());
+            HashMap<Object, ValueWrapper> map = new HashMap<>(keys.size());
             keys.forEach(k -> {
                 ValueWrapper valueWrapper = cache.get(k);
                 map.put(k, valueWrapper);
