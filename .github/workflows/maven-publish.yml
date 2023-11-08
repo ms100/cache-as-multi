@@ -4,8 +4,9 @@
 name: Maven Package
 
 on:
-  release:
-    types: [ created ]
+  create:
+    branches:
+      - release/*
 
 jobs:
   build:
@@ -21,7 +22,7 @@ jobs:
       - name: Set up Apache Maven Central
         uses: actions/setup-java@v3
         with:
-          java-version: '1.8'
+          java-version: '8'
           distribution: 'temurin'
           server-id: ossrh # Value of the distributionManagement/repository/id field of the pom.xml
           server-username: MAVEN_USERNAME # env variable for username in deploy
