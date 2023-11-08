@@ -11,7 +11,7 @@
 <dependency>
     <groupId>io.github.ms100</groupId>
     <artifactId>cache-as-multi</artifactId>
-    <version>1.3.0</version>
+    <version>1.3.1</version>
 </dependency>
 ```
 
@@ -19,7 +19,7 @@
 
 ### v1.3
 
-If the List returned by a batch method cannot guarantee the same size and order as the "object collection parameter,"
+If the List returned by a batch method cannot guarantee the same size and order as the "object collection parameter",
 you can use `@CacheAsMulti.asElementField` to specify the field in the List where the elements of the "object collection
 parameter" are located. This will be more suitable for database queries.
 

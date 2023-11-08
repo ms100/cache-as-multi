@@ -1,3 +1,4 @@
 # Auto Configure
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-  io.github.ms100.cacheasmulti.cache.config.EnhancedCacheAutoConfiguration
+  io.github.ms100.cacheasmulti.cache.config.EnhancedCacheAutoConfiguration,\
+  io.github.ms100.cacheasmulti.support.redis.RedisCacheCustomizerAutoConfiguration
