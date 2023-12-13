@@ -8,7 +8,6 @@ import org.springframework.cache.interceptor.CacheOperationInvocationContext;
 import org.springframework.cache.jcache.interceptor.JCacheOperation;
 import org.springframework.cache.jcache.interceptor.SimpleExceptionCacheResolver;
 import org.springframework.lang.Nullable;
-import org.springframework.util.CollectionUtils;
 
 import javax.cache.annotation.CacheInvocationContext;
 import javax.cache.annotation.CacheInvocationParameter;
@@ -16,6 +15,7 @@ import javax.cache.annotation.CacheResult;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -64,7 +64,7 @@ class CacheAsMultiOperationContext<O extends AbstractJCacheAsMultiOperation<A>, 
         } else if (cacheAsMultiArg instanceof Map) {
             size = ((Map<?, ?>) cacheAsMultiArg).size();
         }
-        this.keyCache = CollectionUtils.newHashMap(size);
+        this.keyCache = new HashMap<>(size);
     }
 
     @Override

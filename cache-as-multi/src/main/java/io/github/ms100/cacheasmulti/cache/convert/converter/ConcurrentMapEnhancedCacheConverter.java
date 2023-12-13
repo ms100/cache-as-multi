@@ -5,10 +5,10 @@ import lombok.SneakyThrows;
 import org.springframework.cache.concurrent.ConcurrentMapCache;
 import org.springframework.core.serializer.support.SerializationDelegate;
 import org.springframework.lang.Nullable;
-import org.springframework.util.CollectionUtils;
 
 import java.lang.reflect.Field;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 
@@ -51,7 +51,7 @@ public class ConcurrentMapEnhancedCacheConverter implements EnhancedCacheConvert
 
         @Override
         public Map<Object, ValueWrapper> multiGet(Collection<?> keys) {
-            Map<Object, ValueWrapper> map = CollectionUtils.newHashMap(keys.size());
+            Map<Object, ValueWrapper> map = new HashMap<>(keys.size());
 
             keys.forEach(key -> {
                 ValueWrapper valueWrapper = this.get(key);
@@ -64,7 +64,7 @@ public class ConcurrentMapEnhancedCacheConverter implements EnhancedCacheConvert
         @Override
         @SneakyThrows
         public void multiPut(Map<?, ?> map) {
-            Map<Object, Object> newMap = CollectionUtils.newHashMap(map.size());
+            Map<Object, Object> newMap = new HashMap<>(map.size());
             map.forEach((k, v) -> newMap.put(k, toStoreValue(v)));
 
             ConcurrentMap<Object, Object> store = getNativeCache();

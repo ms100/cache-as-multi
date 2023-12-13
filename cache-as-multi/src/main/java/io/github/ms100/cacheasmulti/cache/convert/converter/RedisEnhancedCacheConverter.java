@@ -9,7 +9,6 @@ import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisStringCommands;
 import org.springframework.data.redis.core.types.Expiration;
 import org.springframework.lang.Nullable;
-import org.springframework.util.CollectionUtils;
 
 import java.lang.reflect.Method;
 import java.time.Duration;
@@ -61,7 +60,7 @@ public class RedisEnhancedCacheConverter implements EnhancedCacheConverter<Redis
                 throw new IllegalStateException();
             }
 
-            HashMap<Object, ValueWrapper> map = CollectionUtils.newHashMap(keyArr.length);
+            HashMap<Object, ValueWrapper> map = new HashMap<>(keyArr.length);
             for (int i = 0, length = keyArr.length; i < length; i++) {
                 byte[] value = values.get(i);
                 ValueWrapper valueWrapper = toValueWrapper(value == null ? null : deserializeCacheValue(value));

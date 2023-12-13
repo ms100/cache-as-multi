@@ -156,7 +156,7 @@ public abstract class AbstractCacheAsMultiOperation {
                 if (parameterDetail.isStrictNull()) {
                     return Collections.emptyMap();
                 }
-                Map<Object, Object> map = CollectionUtils.newHashMap(subCacheAsMultiArg.size());
+                Map<Object, Object> map = new HashMap<>(subCacheAsMultiArg.size());
                 for (Object o : subCacheAsMultiArg) {
                     map.put(o, null);
                 }
@@ -167,14 +167,14 @@ public abstract class AbstractCacheAsMultiOperation {
                 if (invokeValues.size() != subCacheAsMultiArg.size()) {
                     throw new IllegalStateException("The size of return list is not equal to the size of parameter list");
                 }
-                Map<Object, Object> map = CollectionUtils.newHashMap(subCacheAsMultiArg.size());
+                Map<Object, Object> map = new HashMap<>(subCacheAsMultiArg.size());
                 Iterator<?> iterator = invokeValues.iterator();
                 subCacheAsMultiArg.forEach((argItem) -> {
                     map.put(argItem, iterator.next());
                 });
                 return map;
             }
-            Map<Object, Object> map = CollectionUtils.newHashMap(subCacheAsMultiArg.size());
+            Map<Object, Object> map = new HashMap<>(subCacheAsMultiArg.size());
             invokeValues.forEach(i -> {
                 SimpleEvaluationContext context = CONTEXT_BUILDER.withRootObject(i).build();
                 map.put(parameterDetail.getAsElementFieldExpression().getValue(context), i);
@@ -217,7 +217,7 @@ public abstract class AbstractCacheAsMultiOperation {
                 if (parameterDetail.isStrictNull()) {
                     return Collections.emptyMap();
                 }
-                Map<Object, Object> map = CollectionUtils.newHashMap(subCacheAsMultiArg.size());
+                Map<Object, Object> map = new HashMap<>(subCacheAsMultiArg.size());
                 for (Object o : subCacheAsMultiArg) {
                     map.put(o, null);
                 }
@@ -228,7 +228,7 @@ public abstract class AbstractCacheAsMultiOperation {
                 return invokeValues;
             }
 
-            Map<Object, Object> map = CollectionUtils.newHashMap(subCacheAsMultiArg.size());
+            Map<Object, Object> map = new HashMap<>(subCacheAsMultiArg.size());
             for (Object o : subCacheAsMultiArg) {
                 map.put(o, invokeValues.get(o));
             }

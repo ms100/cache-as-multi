@@ -12,10 +12,7 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.CollectionUtils;
 
 import javax.cache.annotation.CacheResult;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -40,7 +37,7 @@ class CacheResultAsMultiInterceptor extends AbstractJCacheAsMultiInterceptor<Cac
         }
 
         // 参数与数据的映射
-        Map<Object, Object> argValueMap = CollectionUtils.newHashMap(cacheAsMultiArg.size());
+        Map<Object, Object> argValueMap = new HashMap<>(cacheAsMultiArg.size());
 
         Collection<?> missCacheAsMultiArg = findInCache(context, cacheAsMultiArg, argValueMap);
 
@@ -63,7 +60,7 @@ class CacheResultAsMultiInterceptor extends AbstractJCacheAsMultiInterceptor<Cac
     private Collection<?> findInCache(CacheAsMultiOperationContext<CacheResultAsMultiOperation, CacheResult> context,
                                       Collection<?> cacheAsMultiArg, Map<Object, Object> argValueMap) {
 
-        Map<Object, Object> argKeyMap = CollectionUtils.newHashMap(cacheAsMultiArg.size());
+        Map<Object, Object> argKeyMap = new HashMap<>(cacheAsMultiArg.size());
         cacheAsMultiArg.forEach(argItem -> argKeyMap.put(argItem, context.generateKey(argItem)));
         if (log.isTraceEnabled()) {
             log.trace("Find keys " + argKeyMap.values() + " for operation " + context.getOperation());
@@ -113,7 +110,7 @@ class CacheResultAsMultiInterceptor extends AbstractJCacheAsMultiInterceptor<Cac
 
         if (!CollectionUtils.isEmpty(missArgValueMap)) {
             // 需要缓存的数据
-            Map<Object, Object> missKeyValueMap = CollectionUtils.newHashMap(missCacheAsMultiArg.size());
+            Map<Object, Object> missKeyValueMap = new HashMap<>(missCacheAsMultiArg.size());
             missArgValueMap.forEach((argItem, value) -> missKeyValueMap.put(context.generateKey(argItem), value));
             EnhancedCache cache = resolveCache(context);
             // 缓存数据

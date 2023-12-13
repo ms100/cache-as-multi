@@ -8,6 +8,7 @@ import org.springframework.cache.interceptor.CacheOperationInvoker;
 import org.springframework.util.CollectionUtils;
 
 import javax.cache.annotation.CachePut;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -52,7 +53,7 @@ class CachePutAsMultiInterceptor extends AbstractJCacheAsMultiInterceptor<CacheP
             return;
         }
 
-        Map<Object, Object> keyValueMap = CollectionUtils.newHashMap(cacheAsMultiArg.size());
+        Map<Object, Object> keyValueMap = new HashMap<>(cacheAsMultiArg.size());
         cacheAsMultiArg.forEach((argItem, value) -> keyValueMap.put(context.generateKey(argItem), value));
 
         EnhancedCache cache = resolveCache(context);
