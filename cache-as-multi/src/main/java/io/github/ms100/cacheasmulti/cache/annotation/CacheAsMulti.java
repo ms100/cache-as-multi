@@ -39,6 +39,7 @@ import java.lang.reflect.Method;
  * <ol>
  *     <li>入参从单个对象(以下称【对象参数】)变为对象集合(以下称【对象集合参数】)，例如 Integer 变为 Collection&lt;Integer&gt; 或 Set&lt;Integer&gt; 或 List&lt;Integer&gt;。</li>
  *     <li>返回值从单个对象变为 Map&lt;K,V&gt; 或者 List&lt;V&gt; 。例如 Map&lt;Integer,Foo&gt; 或 List&lt;Foo&gt;，若返回的是 List，那应与【对象集合参数】大小相同并顺序一致（v1.3以前）。</li>
+ *     <li>也支持 CompletableFuture&lt;Map&lt;K,V&gt;&gt; 和 CompletableFuture&lt;List&lt;V&gt;&gt; 的异步返回；此时会在 Future 完成后写入缓存，且不支持与 @Cacheable(sync=true) 组合。</li>
  * </ol>
  * <p>
  * 在上面例子中，如果需要对获取单个对象的方法做缓存，会使用 {@link Cacheable @Cacheable} 或 {@link javax.cache.annotation.CacheResult @CacheResult} 注解：

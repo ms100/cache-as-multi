@@ -7,7 +7,6 @@ import org.aopalliance.intercept.MethodInvocation;
 import org.springframework.cache.interceptor.CacheOperationInvocationContext;
 import org.springframework.cache.jcache.interceptor.JCacheOperation;
 import org.springframework.cache.jcache.interceptor.SimpleExceptionCacheResolver;
-import org.springframework.lang.Nullable;
 import org.springframework.util.CollectionUtils;
 
 import javax.cache.annotation.CacheInvocationContext;
@@ -39,7 +38,6 @@ class CacheAsMultiOperationContext<O extends AbstractJCacheAsMultiOperation<A>, 
 
     private final Object[] args;
 
-    @Nullable
     private final Object cacheAsMultiArg;
 
     private final CacheInvocationParameter[] allParameters;

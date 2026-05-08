@@ -41,6 +41,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
@@ -104,63 +105,88 @@ public class EnhancedCachingInterceptor extends CacheInterceptor {
 
     @Nullable
     private Object execute(final CacheOperationInvoker invoker, CacheAsMultiOperationContexts contexts) {
-        // 同步调用的特殊处理
-        if (contexts.isSynchronized()) {
-            try {
-                return Objects.requireNonNull(findCachedItems(contexts, invoker)).getRight();
-            } catch (Cache.ValueRetrievalException ex) {
-                ReflectionUtils.rethrowRuntimeException(ex.getCause());
-            }
-        }
-
         Collection<?> cacheAsMultiArg = contexts.getCacheAsMultiArg();
         // 如果@CacheAsMulti注解的参数值为null或者空集合，则调用原方法返回
         if (CollectionUtils.isEmpty(cacheAsMultiArg)) {
             return invokeOperation(invoker);
         }
 
-        // 处理@CacheEvict的isBeforeInvocation为true的情况
-        processCacheEvicts(contexts, true, null);
-
-        Map<?, ?> argValueMap;
-        Object returnValue;
-
-        // 如果有需要执行的CachePut
-        if (hasCachePut(contexts)) {
-            returnValue = invokeOperation(invoker);
-
-            CacheAsMultiOperation<?> multiOperation = contexts.getFirst(CachePutOperation.class).getMultiOperation();
-            argValueMap = multiOperation.makeCacheMap(cacheAsMultiArg, returnValue);
-
-            if (!CollectionUtils.isEmpty(argValueMap)) {
-                putCachedItems(contexts.get(CacheableOperation.class), argValueMap);
-                putCachedItems(contexts.get(CachePutOperation.class), argValueMap);
-            }
-        } else {
-            Pair<Map<?, ?>, Object> pair = findCachedItems(contexts, invoker);
-            // 如果存在Cacheable
-            if (pair != null) {
-                // findCachedItems会执行invoker，所以这个分支里不能有invoker
-                argValueMap = pair.getLeft();
-                returnValue = pair.getRight();
-            }//如果没有Cacheable，那只剩下CacheEvict
-            else {
-                returnValue = invokeOperation(invoker);
-                CacheAsMultiOperation<?> multiOperation = contexts.getFirst(CacheEvictOperation.class).getMultiOperation();
-                argValueMap = multiOperation.makeCacheMap(cacheAsMultiArg, returnValue);
+        // 同步调用的特殊处理
+        if (contexts.isSynchronized()) {
+            try {
+                return Objects.requireNonNull(findCachedItems(contexts, invoker)).returnValue;
+            } catch (Cache.ValueRetrievalException ex) {
+                ReflectionUtils.rethrowRuntimeException(ex.getCause());
             }
         }
 
-        processCacheEvicts(contexts, false, argValueMap);
+        // 处理@CacheEvict的isBeforeInvocation为true的情况
+        evictCacheItems(contexts, true, null);
 
-        return returnValue;
+        // 如果有需要执行的CachePut
+        if (hasCachePut(contexts)) {
+            Object returnValue = invokeOperation(invoker);
+            CacheAsMultiOperation<?> multiOperation = contexts.getFirst(CachePutOperation.class).getMultiOperation();
+            if (multiOperation.isReturnCF() && returnValue instanceof CompletableFuture<?>) {
+                return ((CompletableFuture<?>) returnValue).thenApply(values -> {
+                    processCacheWritesAndEvicts(contexts, cacheAsMultiArg, values, multiOperation);
+                    return values;
+                });
+            }
+            processCacheWritesAndEvicts(contexts, cacheAsMultiArg, returnValue, multiOperation);
+            return returnValue;
+        } else {
+            InvocationResult invocationResult = findCachedItems(contexts, invoker);
+
+            // 如果存在Cacheable
+            if (invocationResult != null) {
+                // findCachedItems会执行invoker，所以这个分支里不能有invoker
+                Map<?, ?> argValueMap = invocationResult.argValueMap;
+                Object returnValue = invocationResult.returnValue;
+                CacheAsMultiOperation<?> multiOperation = contexts.getFirst(CacheableOperation.class).getMultiOperation();
+                if (multiOperation.isReturnCF() && returnValue instanceof CompletableFuture<?>) {
+                    return ((CompletableFuture<?>) returnValue).thenApply(values -> {
+                        evictCacheItems(contexts, false, argValueMap);
+                        return values;
+                    });
+                }
+                evictCacheItems(contexts, false, argValueMap);
+                return returnValue;
+            }//如果没有Cacheable，那只剩下CacheEvict
+            else {
+                Object returnValue = invokeOperation(invoker);
+                CacheAsMultiOperation<?> multiOperation = contexts.getFirst(CacheEvictOperation.class).getMultiOperation();
+                if (multiOperation.isReturnCF() && returnValue instanceof CompletableFuture<?>) {
+                    return ((CompletableFuture<?>) returnValue).thenApply(values -> {
+                        processCacheEvicts(contexts, cacheAsMultiArg, values, multiOperation);
+                        return values;
+                    });
+                }
+                processCacheEvicts(contexts, cacheAsMultiArg, returnValue, multiOperation);
+                return returnValue;
+            }
+        }
     }
 
-    private void processCacheEvicts(
-            CacheAsMultiOperationContexts contexts, boolean beforeInvocation, @Nullable Map<?, ?> argValueMap) {
+    private void processCacheWritesAndEvicts(CacheAsMultiOperationContexts contexts, Collection<?> cacheAsMultiArg, @Nullable Object returnValue, CacheAsMultiOperation<?> multiOperation) {
+        Map<?, ?> argValueMap = multiOperation.makeCacheMap(cacheAsMultiArg, returnValue);
+
+        if (!CollectionUtils.isEmpty(argValueMap)) {
+            putCacheItems(contexts.get(CacheableOperation.class), argValueMap);
+            putCacheItems(contexts.get(CachePutOperation.class), argValueMap);
+        }
+
+        evictCacheItems(contexts, false, argValueMap);
+    }
+
+    private void processCacheEvicts(CacheAsMultiOperationContexts contexts, Collection<?> cacheAsMultiArg, @Nullable Object returnValue, CacheAsMultiOperation<?> multiOperation) {
+        Map<?, ?> argValueMap = multiOperation.makeCacheMap(cacheAsMultiArg, returnValue);
+        evictCacheItems(contexts, false, argValueMap);
+    }
+
+    private void evictCacheItems(CacheAsMultiOperationContexts contexts, boolean beforeInvocation, @Nullable Map<?, ?> argValueMap) {
 
         Collection<?> cacheAsMultiArg = contexts.getCacheAsMultiArg();
-        assert cacheAsMultiArg != null;
         Collection<CacheAsMultiOperationContext> cacheEvictContexts = contexts.get(CacheEvictOperation.class);
 
         for (CacheAsMultiOperationContext context : cacheEvictContexts) {
@@ -172,11 +198,11 @@ public class EnhancedCachingInterceptor extends CacheInterceptor {
             if (pair.getLeft().isEmpty()) {
                 continue;
             }
-            performCacheEvict(context, operation, pair.getLeft(), argValueMap);
+            performEvict(context, operation, pair.getLeft(), argValueMap);
         }
     }
 
-    private void performCacheEvict(
+    private void performEvict(
             CacheAsMultiOperationContext context, CacheEvictOperation operation,
             Collection<?> subCacheAsMultiArg, @Nullable Map<?, ?> argValueMap) {
 
@@ -203,7 +229,7 @@ public class EnhancedCachingInterceptor extends CacheInterceptor {
 
     @SneakyThrows
     @Nullable
-    private Pair<Map<?, ?>, Object> findCachedItems(CacheAsMultiOperationContexts contexts, CacheOperationInvoker invoker) {
+    private InvocationResult findCachedItems(CacheAsMultiOperationContexts contexts, CacheOperationInvoker invoker) {
 
         Collection<CacheAsMultiOperationContext> cacheableContexts = contexts.get(CacheableOperation.class);
         if (cacheableContexts.isEmpty()) {
@@ -213,7 +239,6 @@ public class EnhancedCachingInterceptor extends CacheInterceptor {
         CacheAsMultiOperationContext firstContext = cacheableContexts.iterator().next();
         CacheAsMultiOperation<?> multiOperation = firstContext.getMultiOperation();
         Collection<?> cacheAsMultiArg = contexts.getCacheAsMultiArg();
-        assert cacheAsMultiArg != null;
         Map<Object, Object> argValueMap = CollectionUtils.newHashMap(cacheAsMultiArg.size());
 
         Collection<?> missCacheAsMultiArg = cacheAsMultiArg;
@@ -231,7 +256,8 @@ public class EnhancedCachingInterceptor extends CacheInterceptor {
         }
 
         if (missCacheAsMultiArg.isEmpty()) {
-            return Pair.of(argValueMap, multiOperation.makeReturnObject(cacheAsMultiArg, argValueMap));
+            Object returnObject = multiOperation.makeReturnObject(cacheAsMultiArg, argValueMap);
+            return new InvocationResult(argValueMap, returnObject);
         }
 
         if (argValueMap.isEmpty()) {
@@ -315,33 +341,48 @@ public class EnhancedCachingInterceptor extends CacheInterceptor {
         return pair.getRight();
     }
 
-    private Pair<Map<?, ?>, Object> invokeWithMissCacheAsMultiArg(
-            Collection<CacheAsMultiOperationContext> contexts, CacheOperationInvoker invoker,
+    private InvocationResult invokeWithMissCacheAsMultiArg(
+            Collection<CacheAsMultiOperationContext> cacheableContexts, CacheOperationInvoker invoker,
             Collection<?> missCacheAsMultiArg, Map<Object, Object> argValueMap) {
 
-        CacheAsMultiOperationContext firstContext = contexts.iterator().next();
+        CacheAsMultiOperationContext firstContext = cacheableContexts.iterator().next();
         Object invokeValues = invokeOperation(firstContext, invoker, missCacheAsMultiArg);
 
         CacheAsMultiOperation<?> multiOperation = firstContext.getMultiOperation();
+        Collection<?> cacheAsMultiArg = firstContext.getCacheAsMultiArg();
+        if (multiOperation.isReturnCF() && invokeValues instanceof CompletableFuture<?>) {
+            CompletableFuture<?> returnValue = ((CompletableFuture<?>) invokeValues).thenApply(values -> {
+                Map<?, ?> missArgValueMap = multiOperation.makeCacheMap(missCacheAsMultiArg, values);
+                if (!CollectionUtils.isEmpty(missArgValueMap)) {
+                    putCacheItems(cacheableContexts, missArgValueMap);
+                    if (argValueMap.isEmpty()) {
+                        argValueMap.putAll(missArgValueMap);
+                        return values;
+                    }
+                    argValueMap.putAll(missArgValueMap);
+                }
+
+                return multiOperation.makeReturnObject(cacheAsMultiArg, argValueMap, false);
+            });
+            return new InvocationResult(argValueMap, returnValue);
+        }
         Map<?, ?> missArgValueMap = multiOperation.makeCacheMap(missCacheAsMultiArg, invokeValues);
 
         // 如果invokeValues是null或者空map，那missArgValueMap也是null或者空map
         if (!CollectionUtils.isEmpty(missArgValueMap)) {
             // 缓存数据
-            putCachedItems(contexts, missArgValueMap);
-
+            putCacheItems(cacheableContexts, missArgValueMap);
             // 如果缓存都未命中，直接返回执行结果
-            if (argValueMap.size() == 0) {
-                return Pair.of(missArgValueMap, invokeValues);
+            if (argValueMap.isEmpty()) {
+                return new InvocationResult(missArgValueMap, invokeValues);
             }
-
             argValueMap.putAll(missArgValueMap);
         }
 
-        return Pair.of(argValueMap, multiOperation.makeReturnObject(firstContext.getCacheAsMultiArg(), argValueMap));
+        return new InvocationResult(argValueMap, multiOperation.makeReturnObject(cacheAsMultiArg, argValueMap, false));
     }
 
-    private void putCachedItems(Collection<CacheAsMultiOperationContext> contexts, Map<?, ?> argValueMap) {
+    private void putCacheItems(Collection<CacheAsMultiOperationContext> contexts, Map<?, ?> argValueMap) {
         for (CacheAsMultiOperationContext context : contexts) {
             Pair<Collection<?>, Collection<?>> pair = splitIsConditionPassing(context, argValueMap.keySet(), argValueMap);
             if (pair.getLeft().isEmpty()) {
@@ -367,7 +408,6 @@ public class EnhancedCachingInterceptor extends CacheInterceptor {
     private boolean hasCachePut(CacheAsMultiOperationContexts contexts) {
 
         Collection<?> cacheAsMultiArg = contexts.getCacheAsMultiArg();
-        assert cacheAsMultiArg != null;
         Collection<CacheAsMultiOperationContext> cachePutContexts = contexts.get(CachePutOperation.class);
         for (CacheAsMultiOperationContext context : cachePutContexts) {
             try {
@@ -506,7 +546,6 @@ public class EnhancedCachingInterceptor extends CacheInterceptor {
         private final boolean sync;
 
         @Getter
-        @Nullable
         private final Collection<?> cacheAsMultiArg;
 
         public CacheAsMultiOperationContexts(Collection<? extends CacheAsMultiOperation<?>> multiOperations,
@@ -564,6 +603,10 @@ public class EnhancedCachingInterceptor extends CacheInterceptor {
                 }
                 CacheAsMultiOperationContext cacheOperationContext = cacheOperationContexts.iterator().next();
                 CacheableOperation operation = (CacheableOperation) cacheOperationContext.getOperation();
+                if (cacheOperationContext.getMultiOperation().isReturnCF()) {
+                    throw new IllegalStateException(
+                            "@Cacheable(sync=true) does not support CompletableFuture return type on '" + operation + "'");
+                }
                 if (cacheOperationContext.getCaches().size() > 1) {
                     throw new IllegalStateException(
                             "@Cacheable(sync=true) only allows a single cache on '" + operation + "'");
@@ -575,6 +618,17 @@ public class EnhancedCachingInterceptor extends CacheInterceptor {
                 return true;
             }
             return false;
+        }
+    }
+
+    private static class InvocationResult {
+        private final Map<?, ?> argValueMap;
+        @Nullable
+        private final Object returnValue;
+
+        private InvocationResult(Map<?, ?> argValueMap, @Nullable Object returnValue) {
+            this.argValueMap = argValueMap;
+            this.returnValue = returnValue;
         }
     }
 

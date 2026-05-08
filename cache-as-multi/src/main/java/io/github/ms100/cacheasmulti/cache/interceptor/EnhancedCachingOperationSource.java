@@ -51,7 +51,7 @@ public class EnhancedCachingOperationSource extends AnnotationCacheOperationSour
 
         CacheAsMultiParameterDetail parameterDetail = findCacheAsMultiParameter(
                 method.getDeclaringClass(), method.getName(), method.getParameterTypes());
-        
+
         if (parameterDetail == null) {
             return cacheOperations;
         }

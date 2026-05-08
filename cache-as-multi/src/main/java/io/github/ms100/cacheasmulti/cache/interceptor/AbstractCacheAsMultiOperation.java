@@ -16,7 +16,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * @author zhumengshuai
@@ -26,15 +26,24 @@ public abstract class AbstractCacheAsMultiOperation {
     protected final CacheAsMultiParameterDetail parameterDetail;
 
     @Nullable
-    protected final Function<Collection<?>, Collection<?>> cacheAsMultiArgCreator;
-
-    @Nullable
     protected final ReturnTypeMaker returnTypeMaker;
+
+    @Getter
+    protected final boolean returnCF;
 
     public AbstractCacheAsMultiOperation(Method method, CacheAsMultiParameterDetail parameterDetail) {
         this.parameterDetail = parameterDetail;
-        this.cacheAsMultiArgCreator = initializeCacheAsMultiArgCreator(parameterDetail);
-        this.returnTypeMaker = initializeReturnTypeMaker(method, parameterDetail);
+
+        ResolvableType returnResolvableType = ResolvableType.forMethodReturnType(method);
+        Class<?> returnType = returnResolvableType.toClass();
+        if (CompletableFuture.class.isAssignableFrom(returnType)) {
+            returnResolvableType = returnResolvableType.getGeneric(0);
+            this.returnCF = true;
+        } else {
+            this.returnCF = false;
+        }
+
+        this.returnTypeMaker = initializeReturnTypeMaker(returnResolvableType, method, parameterDetail);
         validateParameterDetail(method, parameterDetail);
     }
 
@@ -53,15 +62,17 @@ public abstract class AbstractCacheAsMultiOperation {
         return parameterDetail.getPosition();
     }
 
-    public boolean isStrictNull() {
-        return parameterDetail.isStrictNull();
-    }
-
     public Collection<?> newCacheAsMultiArg(Collection<?> subCacheAsMultiArg) {
-        assert cacheAsMultiArgCreator != null;
-        return cacheAsMultiArgCreator.apply(subCacheAsMultiArg);
+        Class<?> rawType = parameterDetail.getRawType();
+        if (rawType.isAssignableFrom(ArrayList.class)) {
+            return new ArrayList(subCacheAsMultiArg);
+        } else if (rawType.isAssignableFrom(HashSet.class)) {
+            return new HashSet(subCacheAsMultiArg);
+        }
+        throw new IllegalStateException("The @CacheAsMulti parameter should be assignable from ArrayList or HashSet, and assign to Collection");
     }
 
+    @Nullable
     public Map<?, ?> makeCacheMap(Collection<?> subCacheAsMultiArg, @Nullable Object invokeValues) {
         if (returnTypeMaker == null) {
             return null;
@@ -72,27 +83,25 @@ public abstract class AbstractCacheAsMultiOperation {
 
     @Nullable
     public Object makeReturnObject(Collection<?> cacheAsMultiArg, Map<?, ?> argValueMap) {
+        return makeReturnObject(cacheAsMultiArg, argValueMap, returnCF);
+    }
+
+    @Nullable
+    public Object makeReturnObject(Collection<?> cacheAsMultiArg, Map<?, ?> argValueMap, boolean cfWrap) {
         if (returnTypeMaker == null) {
             return null;
         }
 
-        return returnTypeMaker.makeReturnObject(parameterDetail, cacheAsMultiArg, argValueMap);
-    }
-
-    @Nullable
-    protected static Function<Collection<?>, Collection<?>> initializeCacheAsMultiArgCreator(CacheAsMultiParameterDetail parameterDetail) {
-        Class<?> rawType = parameterDetail.getRawType();
-        if (rawType.isAssignableFrom(ArrayList.class)) {
-            return ArrayList::new;
-        } else if (rawType.isAssignableFrom(HashSet.class)) {
-            return HashSet::new;
+        Object returnObject = returnTypeMaker.makeReturnObject(parameterDetail, cacheAsMultiArg, argValueMap);
+        if (cfWrap) {
+            return CompletableFuture.completedFuture(returnObject);
         }
-        return null;
+        return returnObject;
     }
 
     @Nullable
-    protected static ReturnTypeMaker<?> initializeReturnTypeMaker(Method method, CacheAsMultiParameterDetail parameterDetail) {
-        ResolvableType returnResolvableType = ResolvableType.forMethodReturnType(method);
+    protected static ReturnTypeMaker<?> initializeReturnTypeMaker(
+            ResolvableType returnResolvableType, Method method, CacheAsMultiParameterDetail parameterDetail) {
 
         Class<?> returnType = returnResolvableType.toClass();
         // 如果返回的是 Map，那么 Map 的 key 的类型应该与 collection 参数的泛型类型一致

@@ -81,7 +81,10 @@ class FooService {
 1. 入参从单个对象(以下称【对象参数】)变为对象集合(以下称【对象集合参数】)，例如 `Integer` 变为 `Collection<Integer>`
    或 `Set<Integer>` 或 `List<Integer>`。
 2. 返回值从单个对象变为 `Map<K,V>` 或者 `List<V>` 。例如 `Map<Integer,Foo>` 或 `List<Foo>`，若返回的是 `List`
-   类型，那应与【对象集合参数】大小相同并顺序一致（PS: v1.3版本之后不再有此限制，详见[更新细节](#v13)）。
+   类型，那应与【对象集合参数】大小相同并顺序一致，或通过v1.3版本新增属性绕过限制，详见[更新细节](#v13)。
+   另外也支持 `CompletableFuture<Map<K,V>>` 与 `CompletableFuture<List<V>>` 这两种异步返回类型，缓存写入发生在 Future
+   完成时；
+   该场景不支持 `@Cacheable(sync=true)`。
 
 #### 加缓存
 

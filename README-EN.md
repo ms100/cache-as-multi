@@ -89,8 +89,8 @@ There are two changes to the method of obtaining batch objects compared to the m
    to `Collection<Integer>` or `Set<Integer>` or `List<Integer>`.
 2. The return value changes from a single object to `Map<K, V>` or `List<V>`. For example, `Map<Integer, Foo>`
    or `List<Foo>`. If the returned type is `List`, it should be the same size as the "object collection parameter" and
-   in the same order(PS: After version v1.3, this limitation no longer exists. Please refer to
-   the [update details](#v13) for more information.).
+   in the same order, or get around the restrictions by adding properties in version 1.3, see [update details](#v13) for
+   more information.
 
 #### Add Cache
 

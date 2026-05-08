@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 /**
@@ -57,7 +58,7 @@ class CacheResultAsMultiInterceptor extends AbstractJCacheAsMultiInterceptor<Cac
             log.debug("Miss cache args " + missCacheAsMultiArg);
         }
         // 查询 miss 的结果
-        return invokeWithMissCacheAsMultiArg(context, invoker, missCacheAsMultiArg, argValueMap);
+        return invokeForMissCacheAsMultiArg(context, invoker, missCacheAsMultiArg, argValueMap);
     }
 
     private Collection<?> findInCache(CacheAsMultiOperationContext<CacheResultAsMultiOperation, CacheResult> context,
@@ -101,13 +102,23 @@ class CacheResultAsMultiInterceptor extends AbstractJCacheAsMultiInterceptor<Cac
 
 
     @Nullable
-    private Object invokeWithMissCacheAsMultiArg(CacheAsMultiOperationContext<CacheResultAsMultiOperation, CacheResult> context,
-                                                 CacheOperationInvoker invoker, Collection<?> missCacheAsMultiArg,
-                                                 Map<Object, Object> argValueMap) {
+    private Object invokeForMissCacheAsMultiArg(CacheAsMultiOperationContext<CacheResultAsMultiOperation, CacheResult> context,
+                                                CacheOperationInvoker invoker, Collection<?> missCacheAsMultiArg,
+                                                Map<Object, Object> argValueMap) {
 
         checkForCachedException(context, missCacheAsMultiArg);
 
         Object invokeValues = invokeOperation(context, invoker, missCacheAsMultiArg);
+        CacheResultAsMultiOperation multiOperation = context.getMultiOperation();
+        if (multiOperation.isReturnCF() && invokeValues instanceof CompletableFuture<?>) {
+            return ((CompletableFuture<?>) invokeValues).thenApply(asyncValues -> cacheMissValueAndMakeReturn(context, missCacheAsMultiArg, argValueMap, asyncValues));
+        }
+        return cacheMissValueAndMakeReturn(context, missCacheAsMultiArg, argValueMap, invokeValues);
+    }
+
+    @Nullable
+    private Object cacheMissValueAndMakeReturn(CacheAsMultiOperationContext<CacheResultAsMultiOperation, CacheResult> context,
+                                               Collection<?> missCacheAsMultiArg, Map<Object, Object> argValueMap, Object invokeValues) {
         CacheResultAsMultiOperation multiOperation = context.getMultiOperation();
         Map<?, ?> missArgValueMap = multiOperation.makeCacheMap(missCacheAsMultiArg, invokeValues);
 
@@ -120,7 +131,7 @@ class CacheResultAsMultiInterceptor extends AbstractJCacheAsMultiInterceptor<Cac
             doMultiPut(cache, missKeyValueMap);
 
             // 如果缓存都未命中，直接返回执行结果
-            if (argValueMap.size() == 0) {
+            if (argValueMap.isEmpty()) {
                 return invokeValues;
             }
 
@@ -128,8 +139,7 @@ class CacheResultAsMultiInterceptor extends AbstractJCacheAsMultiInterceptor<Cac
         }
 
         Collection<?> cacheAsMultiArg = (Collection<?>) context.getCacheAsMultiArg();
-        assert cacheAsMultiArg != null;
-        return multiOperation.makeReturnObject(cacheAsMultiArg, argValueMap);
+        return multiOperation.makeReturnObject(cacheAsMultiArg, argValueMap, false);
     }
 
 
@@ -142,8 +152,8 @@ class CacheResultAsMultiInterceptor extends AbstractJCacheAsMultiInterceptor<Cac
             Collection<Object> missKeys = missCacheAsMultiArg.stream().map(context::generateKey).collect(Collectors.toList());
 
             Map<Object, ValueWrapper> keyThrowableWrapperMap = this.doMultiGet(exceptionCache, missKeys);
-            if (keyThrowableWrapperMap != null && keyThrowableWrapperMap.size() != 0) {
-                Object ex = keyThrowableWrapperMap.values().stream().filter(Objects::nonNull).findFirst().orElse(() -> null).get();
+            if (!CollectionUtils.isEmpty(keyThrowableWrapperMap)) {
+                Object ex = keyThrowableWrapperMap.values().stream().filter(Objects::nonNull).findFirst().map(ValueWrapper::get).orElse(null);
                 if (ex instanceof Throwable) {
                     throw new RuntimeException((Throwable) ex);
                 }

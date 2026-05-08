@@ -10,10 +10,9 @@
     <name>Cache As Multi</name>
     <url>https://github.com/ms100/cache-as-multi</url>
     <description>
-        Extend Spring Cache to implement individual caching for each item in batch data, which can improve cache hit
-        rate and utilization. Additionally, this extension allows the methods for operating on batch data to share the
-        cache with the methods for operating on individual data.
-        扩展 Spring Cache 以实现批量数据中每项的单独缓存，从而提升缓存的命中率和使用率，并且可以使操作批量数据的方法与操作单个数据的方法共用缓存。
+        Extend Spring Cache to implement batch methods that take a collection as input and return a Map or List,
+        breaking down the caching semantics into one cache entry per element.
+        扩展 Spring Cache 以实现把「集合入参 + Map/List 出参」的批量方法，缓存语义拆成「每个元素一条缓存」。
     </description>
 
     <inceptionYear>2023</inceptionYear>
