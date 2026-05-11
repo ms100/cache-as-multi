@@ -1,7 +1,6 @@
 package io.github.ms100.cacheasmultisample.cache.service;
 
 import io.github.ms100.cacheasmulti.cache.annotation.CacheAsMulti;
-import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
@@ -62,7 +61,7 @@ public class FarService {
     @Cacheable(cacheNames = "far2", key = "#a0+' '+#a1")
     public Object getFar2(Integer id, String str) {
         System.out.println("getFar2====----" + id);
-        return Pair.of(id, String.format("id:%d,name:%s", id, id));
+        return new Far(id, String.format("id:%d,name:%s", id, id));
     }
 
     @CachePut(cacheNames = "far2", key = "#id+' '+#a1")
@@ -78,7 +77,7 @@ public class FarService {
 
         return ids.stream().collect(Collectors.toMap(
                 id -> id,
-                id -> Pair.of(id, String.format("id:%d,name:%s", id, id))
+                id -> new Far(id, String.format("id:%d,name:%s", id, id))
         ));
     }
 

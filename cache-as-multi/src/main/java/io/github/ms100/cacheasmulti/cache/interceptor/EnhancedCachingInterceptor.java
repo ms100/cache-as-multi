@@ -7,8 +7,6 @@ import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.aopalliance.intercept.MethodInvocation;
-import org.apache.commons.lang3.function.ToBooleanBiFunction;
-import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.aop.ProxyMethodInvocation;
 import org.springframework.aop.framework.AopProxyUtils;
 import org.springframework.cache.Cache;
@@ -44,6 +42,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.BiPredicate;
 import java.util.stream.Collectors;
 
 /**
@@ -194,11 +193,11 @@ public class EnhancedCachingInterceptor extends CacheInterceptor {
             if (beforeInvocation != operation.isBeforeInvocation()) {
                 continue;
             }
-            Pair<Collection<?>, Collection<?>> pair = splitIsConditionPassing(context, cacheAsMultiArg, argValueMap);
-            if (pair.getLeft().isEmpty()) {
+            ConditionResult conditionResult = splitIsConditionPassing(context, cacheAsMultiArg, argValueMap);
+            if (conditionResult.allow.isEmpty()) {
                 continue;
             }
-            performEvict(context, operation, pair.getLeft(), argValueMap);
+            performEvict(context, operation, conditionResult.allow, argValueMap);
         }
     }
 
@@ -284,8 +283,8 @@ public class EnhancedCachingInterceptor extends CacheInterceptor {
     private Collection<?> findInCaches(CacheAsMultiOperationContext context,
                                        Collection<?> subCacheAsMultiArg, Map<Object, Object> argValueMap) {
 
-        Pair<Collection<?>, Collection<?>> pair = splitIsConditionPassing(context, subCacheAsMultiArg, null);
-        if (pair.getLeft().isEmpty()) {
+        ConditionResult conditionResult = splitIsConditionPassing(context, subCacheAsMultiArg, null);
+        if (conditionResult.allow.isEmpty()) {
             if (log.isTraceEnabled()) {
                 log.trace("No cache entry for cacheAsMulti '" + subCacheAsMultiArg + "' in cache(s) " + context.getCacheNames());
             }
@@ -293,12 +292,12 @@ public class EnhancedCachingInterceptor extends CacheInterceptor {
             return subCacheAsMultiArg;
         }
 
-        Map<Object, Object> argKeyMap = generateArgKeyMap(context, pair.getLeft());
+        Map<Object, Object> argKeyMap = generateArgKeyMap(context, conditionResult.allow);
         if (log.isTraceEnabled()) {
             log.trace("Find keys " + argKeyMap.values() + " for operation " + context.getOperation());
         }
 
-        Collection<?> missCacheAsMultiArg = pair.getLeft();
+        Collection<?> missCacheAsMultiArg = conditionResult.allow;
         Collection<Object> missKeys = new ArrayList<>(argKeyMap.values());
 
         for (EnhancedCache cache : context.getCaches()) {
@@ -328,17 +327,17 @@ public class EnhancedCachingInterceptor extends CacheInterceptor {
 
             // 如果可以走缓存的都命中了，那直接返回不能走缓存的Collection
             if (missCacheAsMultiArg.isEmpty()) {
-                return pair.getRight();
+                return conditionResult.deny;
             }
         }
 
-        if (pair.getRight().isEmpty()) {
+        if (conditionResult.deny.isEmpty()) {
             return missCacheAsMultiArg;
         }
 
-        // pair的容量更大，所以放到pair中
-        ((Collection<Object>) pair.getRight()).addAll(missCacheAsMultiArg);
-        return pair.getRight();
+        // conditionResult的容量更大，所以放到conditionResult中
+        ((Collection<Object>) conditionResult.deny).addAll(missCacheAsMultiArg);
+        return conditionResult.deny;
     }
 
     private InvocationResult invokeWithMissCacheAsMultiArg(
@@ -384,17 +383,17 @@ public class EnhancedCachingInterceptor extends CacheInterceptor {
 
     private void putCacheItems(Collection<CacheAsMultiOperationContext> contexts, Map<?, ?> argValueMap) {
         for (CacheAsMultiOperationContext context : contexts) {
-            Pair<Collection<?>, Collection<?>> pair = splitIsConditionPassing(context, argValueMap.keySet(), argValueMap);
-            if (pair.getLeft().isEmpty()) {
+            ConditionResult conditionResult = splitIsConditionPassing(context, argValueMap.keySet(), argValueMap);
+            if (conditionResult.allow.isEmpty()) {
                 continue;
             }
 
-            pair = splitCanPutToCache(context, pair.getLeft(), argValueMap);
-            if (pair.getLeft().isEmpty()) {
+            conditionResult = splitCanPutToCache(context, conditionResult.allow, argValueMap);
+            if (conditionResult.allow.isEmpty()) {
                 continue;
             }
 
-            Map<Object, Object> keyValueMap = generateKeyValueMap(context, pair.getLeft(), argValueMap);
+            Map<Object, Object> keyValueMap = generateKeyValueMap(context, conditionResult.allow, argValueMap);
             if (log.isTraceEnabled()) {
                 log.trace("Store key-value map " + keyValueMap + " for operation " + context.getOperation());
             }
@@ -411,8 +410,8 @@ public class EnhancedCachingInterceptor extends CacheInterceptor {
         Collection<CacheAsMultiOperationContext> cachePutContexts = contexts.get(CachePutOperation.class);
         for (CacheAsMultiOperationContext context : cachePutContexts) {
             try {
-                Pair<Collection<?>, Collection<?>> pair = splitIsConditionPassing(context, cacheAsMultiArg, null);
-                if (!pair.getLeft().isEmpty()) {
+                ConditionResult conditionResult = splitIsConditionPassing(context, cacheAsMultiArg, null);
+                if (!conditionResult.allow.isEmpty()) {
                     return true;
                 }
             } catch (EvaluationException ex) {
@@ -433,24 +432,24 @@ public class EnhancedCachingInterceptor extends CacheInterceptor {
         return ((CacheAsMultiOperationInvoker) invoker).invoke(invokeArg);
     }
 
-    private static Pair<Collection<?>, Collection<?>> splitIsConditionPassing(
+    private static ConditionResult splitIsConditionPassing(
             CacheAsMultiOperationContext context, Collection<?> subCacheAsMultiArg, @Nullable Map<?, ?> argValueMap) {
 
-        Pair<Collection<?>, Collection<?>> pair = context.splitIsConditionPassing(subCacheAsMultiArg, argValueMap);
+        ConditionResult result = context.splitIsConditionPassing(subCacheAsMultiArg, argValueMap);
         if (log.isTraceEnabled()) {
-            log.trace("Cache condition allow:" + pair.getLeft() + ", deny:" + pair.getRight() + " for operation " + context.getOperation());
+            log.trace("Cache condition allow:" + result.allow + ", deny:" + result.deny + " for operation " + context.getOperation());
         }
-        return pair;
+        return result;
     }
 
-    private static Pair<Collection<?>, Collection<?>> splitCanPutToCache(
+    private static ConditionResult splitCanPutToCache(
             CacheAsMultiOperationContext context, Collection<?> subCacheAsMultiArg, Map<?, ?> argValueMap) {
 
-        Pair<Collection<?>, Collection<?>> pair = context.splitCanPutToCache(subCacheAsMultiArg, argValueMap);
+        ConditionResult result = context.splitCanPutToCache(subCacheAsMultiArg, argValueMap);
         if (log.isTraceEnabled()) {
-            log.trace("Cache condition allow:" + pair.getLeft() + ", deny:" + pair.getRight() + " for operation " + context.getOperation());
+            log.trace("Cache condition allow:" + result.allow + ", deny:" + result.deny + " for operation " + context.getOperation());
         }
-        return pair;
+        return result;
     }
 
     private Collection<Object> generateKeys(CacheAsMultiOperationContext context,
@@ -632,6 +631,15 @@ public class EnhancedCachingInterceptor extends CacheInterceptor {
         }
     }
 
+    private static class ConditionResult {
+        private final Collection<?> allow;
+        private final Collection<?> deny;
+
+        public ConditionResult(Collection<?> allow, Collection<?> deny) {
+            this.allow = allow;
+            this.deny = deny;
+        }
+    }
 
     class CacheAsMultiOperationContext extends CacheOperationContext implements CacheOperationInvocationContext<CacheOperation> {
 
@@ -691,7 +699,7 @@ public class EnhancedCachingInterceptor extends CacheInterceptor {
             return super.canPutToCache(result);
         }
 
-        private Pair<Collection<?>, Collection<?>> splitIsConditionPassing(
+        private ConditionResult splitIsConditionPassing(
                 Collection<?> subCacheAsMultiArg, @Nullable Map<?, ?> argValueMap) {
 
             if (this.isConditionAllPassing == null) {
@@ -701,7 +709,7 @@ public class EnhancedCachingInterceptor extends CacheInterceptor {
             }
 
             if (this.isConditionAllPassing) {
-                return Pair.of(subCacheAsMultiArg, Collections.emptyList());
+                return new ConditionResult(subCacheAsMultiArg, Collections.emptyList());
             }
             if (argValueMap == null) {
                 argValueMap = Collections.emptyMap();
@@ -710,7 +718,7 @@ public class EnhancedCachingInterceptor extends CacheInterceptor {
             return splitPassing(subCacheAsMultiArg, argValueMap, this::isConditionPassing);
         }
 
-        private Pair<Collection<?>, Collection<?>> splitCanPutToCache(
+        private ConditionResult splitCanPutToCache(
                 Collection<?> subCacheAsMultiArg, Map<?, ?> argValueMap) {
 
             String unless = "";
@@ -722,18 +730,18 @@ public class EnhancedCachingInterceptor extends CacheInterceptor {
             }
 
             if (!StringUtils.hasText(unless)) {
-                return Pair.of(subCacheAsMultiArg, Collections.emptyList());
+                return new ConditionResult(subCacheAsMultiArg, Collections.emptyList());
             }
             return splitPassing(subCacheAsMultiArg, argValueMap, this::canPutToCache);
         }
 
-        private Pair<Collection<?>, Collection<?>> splitPassing(
-                Collection<?> subCacheAsMultiArg, Map<?, ?> argValueMap, ToBooleanBiFunction<Object, Object> function) {
+        private ConditionResult splitPassing(
+                Collection<?> subCacheAsMultiArg, Map<?, ?> argValueMap, BiPredicate<Object, Object> function) {
 
             List<Object> allow = new ArrayList<>(subCacheAsMultiArg.size());
             List<Object> deny = new ArrayList<>(subCacheAsMultiArg.size());
             for (Object argItem : subCacheAsMultiArg) {
-                boolean passing = function.applyAsBoolean(argItem, argValueMap.get(argItem));
+                boolean passing = function.test(argItem, argValueMap.get(argItem));
                 if (passing) {
                     allow.add(argItem);
                 } else {
@@ -741,7 +749,7 @@ public class EnhancedCachingInterceptor extends CacheInterceptor {
                 }
             }
 
-            return Pair.of(allow, deny);
+            return new ConditionResult(allow, deny);
         }
 
         protected Object generateKey(Object cacheAsMultiArgItem, @Nullable Object result) {
