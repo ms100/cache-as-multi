@@ -1,6 +1,7 @@
 package io.github.ms100.cacheasmulti.cache.convert.converter;
 
 import io.github.ms100.cacheasmulti.cache.EnhancedCache;
+import io.github.ms100.cacheasmulti.util.CollectionUtils;
 import lombok.SneakyThrows;
 import org.springframework.data.redis.cache.RedisCache;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
@@ -9,7 +10,6 @@ import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisStringCommands;
 import org.springframework.data.redis.core.types.Expiration;
 import org.springframework.lang.Nullable;
-import org.springframework.util.CollectionUtils;
 
 import java.lang.reflect.Method;
 import java.time.Duration;

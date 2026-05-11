@@ -2,6 +2,7 @@ package io.github.ms100.cacheasmulti.jcache.interceptor;
 
 import io.github.ms100.cacheasmulti.cache.EnhancedCache;
 import io.github.ms100.cacheasmulti.cache.annotation.CacheAsMulti;
+import io.github.ms100.cacheasmulti.util.CollectionUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.Cache;
 import org.springframework.cache.Cache.ValueWrapper;
@@ -10,7 +11,6 @@ import org.springframework.cache.interceptor.CacheErrorHandler;
 import org.springframework.cache.interceptor.CacheOperationInvoker;
 import org.springframework.cache.jcache.interceptor.JCacheOperation;
 import org.springframework.lang.Nullable;
-import org.springframework.util.CollectionUtils;
 
 import java.lang.annotation.Annotation;
 import java.util.Collection;

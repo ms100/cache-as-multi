@@ -1,11 +1,11 @@
 package io.github.ms100.cacheasmulti.cache.interceptor;
 
 import io.github.ms100.cacheasmulti.cache.annotation.CacheAsMultiParameterDetail;
+import io.github.ms100.cacheasmulti.util.CollectionUtils;
 import lombok.Getter;
 import org.springframework.core.ResolvableType;
 import org.springframework.expression.spel.support.SimpleEvaluationContext;
 import org.springframework.lang.Nullable;
-import org.springframework.util.CollectionUtils;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;

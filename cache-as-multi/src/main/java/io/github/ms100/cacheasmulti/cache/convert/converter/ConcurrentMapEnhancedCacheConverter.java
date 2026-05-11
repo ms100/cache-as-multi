@@ -1,11 +1,11 @@
 package io.github.ms100.cacheasmulti.cache.convert.converter;
 
 import io.github.ms100.cacheasmulti.cache.EnhancedCache;
+import io.github.ms100.cacheasmulti.util.CollectionUtils;
 import lombok.SneakyThrows;
 import org.springframework.cache.concurrent.ConcurrentMapCache;
 import org.springframework.core.serializer.support.SerializationDelegate;
 import org.springframework.lang.Nullable;
-import org.springframework.util.CollectionUtils;
 
 import java.lang.reflect.Field;
 import java.util.Collection;

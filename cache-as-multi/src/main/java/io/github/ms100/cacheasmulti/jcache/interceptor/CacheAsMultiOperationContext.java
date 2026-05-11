@@ -1,13 +1,13 @@
 package io.github.ms100.cacheasmulti.jcache.interceptor;
 
 import io.github.ms100.cacheasmulti.cache.annotation.CacheAsMulti;
+import io.github.ms100.cacheasmulti.util.CollectionUtils;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.aopalliance.intercept.MethodInvocation;
 import org.springframework.cache.interceptor.CacheOperationInvocationContext;
 import org.springframework.cache.jcache.interceptor.JCacheOperation;
 import org.springframework.cache.jcache.interceptor.SimpleExceptionCacheResolver;
-import org.springframework.util.CollectionUtils;
 
 import javax.cache.annotation.CacheInvocationContext;
 import javax.cache.annotation.CacheInvocationParameter;

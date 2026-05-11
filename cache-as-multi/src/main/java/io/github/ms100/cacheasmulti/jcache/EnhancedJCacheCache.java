@@ -1,8 +1,8 @@
 package io.github.ms100.cacheasmulti.jcache;
 
 import io.github.ms100.cacheasmulti.cache.EnhancedCache;
+import io.github.ms100.cacheasmulti.util.CollectionUtils;
 import org.springframework.cache.jcache.JCacheCache;
-import org.springframework.util.CollectionUtils;
 
 import javax.cache.Cache;
 import java.util.Collection;
