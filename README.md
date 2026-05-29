@@ -16,6 +16,30 @@
 
 ## 最近更新
 
+### v1.4
+
+批量缓存方法现支持 `CompletableFuture<Map<K,V>>` 与 `CompletableFuture<List<V>>` 两种异步返回类型。缓存读取仍按元素拆分处理；缓存写入在 Future 正常完成时触发。该场景不支持 `@Cacheable(sync=true)`。
+
+```java
+class FooService {
+   @Cacheable(cacheNames = "foo")
+   public CompletableFuture<Map<Integer, Foo>> getMultiFoo(@CacheAsMulti Set<Integer> fooIds) {
+      return CompletableFuture.supplyAsync(() -> loadFromDb(fooIds));
+   }
+
+   @Cacheable(cacheNames = "foo")
+   public CompletableFuture<List<Foo>> getMultiFooList(@CacheAsMulti List<Integer> fooIds) {
+      return CompletableFuture.supplyAsync(() -> loadListFromDb(fooIds));
+   }
+}
+```
+
+其他变更：
+
+- 移除对 `commons-lang3` 的依赖，减少传递依赖
+- Spring Boot 兼容版本降至 2.2.0.RELEASE，适配更广的 Spring 版本
+- 优化 Redis 自定义配置 Bean 的加载顺序
+
 ### v1.3
 
 若批量方法返回的 List 不能保证与【对象集合参数】大小相同并顺序一致时，可以使用 `@CacheAsMulti.asElementField`
@@ -83,8 +107,7 @@ class FooService {
 2. 返回值从单个对象变为 `Map<K,V>` 或者 `List<V>` 。例如 `Map<Integer,Foo>` 或 `List<Foo>`，若返回的是 `List`
    类型，那应与【对象集合参数】大小相同并顺序一致，或通过v1.3版本新增属性绕过限制，详见[更新细节](#v13)。
    另外也支持 `CompletableFuture<Map<K,V>>` 与 `CompletableFuture<List<V>>` 这两种异步返回类型，缓存写入发生在 Future
-   完成时；
-   该场景不支持 `@Cacheable(sync=true)`。
+   完成时；该场景不支持 `@Cacheable(sync=true)`，详见[更新细节](#v14)。
 
 #### 加缓存
 

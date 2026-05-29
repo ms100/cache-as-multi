@@ -31,6 +31,7 @@ hs_err_pid*
 # IntelliJ IDEA
 .idea
 *.iml
+.DS_Store
 
 # Maven Submodules
 **/target/
@@ -46,3 +47,14 @@ application-*.yaml
 
 *.log
 .vscode/
+
+#AI
+.agents/
+.claude/
+.comet/
+.superpowers/
+openspec/
+docs/
+.codex/
+.gemini/
+
