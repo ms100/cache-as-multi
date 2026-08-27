@@ -13,9 +13,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
-@SpringBootTest
+@SpringBootTest(properties = "spring.cache.type=simple")
 class CompletableFutureCacheAsMultiTest {
 
     @Autowired
@@ -102,8 +103,13 @@ class CompletableFutureCacheAsMultiTest {
     @Test
     void canceledFutureShouldNotBeCached() {
         Set<Integer> ids = new HashSet<>(Arrays.asList(1, 2));
-        Assertions.assertThrows(CancellationException.class, () -> farService.getCanceledMultiFar(ids, "C").join());
-        Assertions.assertThrows(CancellationException.class, () -> farService.getCanceledMultiFar(ids, "C").join());
+        CompletableFuture<Map<Integer, String>> first = farService.getCanceledMultiFar(ids, "C");
+        Assertions.assertTrue(first.isCancelled());
+        Assertions.assertThrows(CancellationException.class, first::join);
+
+        CompletableFuture<Map<Integer, String>> second = farService.getCanceledMultiFar(ids, "C");
+        Assertions.assertTrue(second.isCancelled());
+        Assertions.assertThrows(CancellationException.class, second::join);
         Assertions.assertEquals(2, farService.getCanceledLoadCount());
     }
 }

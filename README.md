@@ -18,17 +18,17 @@
 
 ### v1.4
 
-批量缓存方法现支持 `CompletableFuture<Map<K,V>>` 与 `CompletableFuture<List<V>>` 两种异步返回类型。缓存读取仍按元素拆分处理；缓存写入在 Future 正常完成时触发。该场景不支持 `@Cacheable(sync=true)`。
+批量缓存方法现支持 `CompletionStage<Map<K,V>>` 与 `CompletionStage<List<V>>` 两种异步返回类型，`CompletableFuture` 作为其实现保持兼容。方法声明应使用 `CompletionStage` 或 `CompletableFuture`，不能声明为更窄的自定义 Stage 子类型。缓存读取仍按元素拆分处理；缓存写入和 after-invocation eviction 仅在阶段正常完成时触发，异常或取消不会产生这些副作用。该场景不支持 `@Cacheable(sync=true)`。
 
 ```java
 class FooService {
    @Cacheable(cacheNames = "foo")
-   public CompletableFuture<Map<Integer, Foo>> getMultiFoo(@CacheAsMulti Set<Integer> fooIds) {
+   public CompletionStage<Map<Integer, Foo>> getMultiFoo(@CacheAsMulti Set<Integer> fooIds) {
       return CompletableFuture.supplyAsync(() -> loadFromDb(fooIds));
    }
 
    @Cacheable(cacheNames = "foo")
-   public CompletableFuture<List<Foo>> getMultiFooList(@CacheAsMulti List<Integer> fooIds) {
+   public CompletionStage<List<Foo>> getMultiFooList(@CacheAsMulti List<Integer> fooIds) {
       return CompletableFuture.supplyAsync(() -> loadListFromDb(fooIds));
    }
 }
@@ -106,8 +106,9 @@ class FooService {
    或 `Set<Integer>` 或 `List<Integer>`。
 2. 返回值从单个对象变为 `Map<K,V>` 或者 `List<V>` 。例如 `Map<Integer,Foo>` 或 `List<Foo>`，若返回的是 `List`
    类型，那应与【对象集合参数】大小相同并顺序一致，或通过v1.3版本新增属性绕过限制，详见[更新细节](#v13)。
-   另外也支持 `CompletableFuture<Map<K,V>>` 与 `CompletableFuture<List<V>>` 这两种异步返回类型，缓存写入发生在 Future
-   完成时；该场景不支持 `@Cacheable(sync=true)`，详见[更新细节](#v14)。
+   另外也支持 `CompletionStage<Map<K,V>>` 与 `CompletionStage<List<V>>` 这两种异步返回类型，`CompletableFuture`
+   作为实现保持兼容。缓存写入和 after-invocation eviction 仅在阶段正常完成时发生；该场景不支持
+   `@Cacheable(sync=true)`，详见[更新细节](#v14)。
 
 #### 加缓存
 
@@ -275,8 +276,6 @@ spring:
           foo: PT15S  #foo缓存15秒
           demo: PT5M  #demo缓存5分钟
 ```
-
-
 
 
 
