@@ -1,0 +1,246 @@
+schema: comet.native.v4
+name: repair-sample-cache-expression
+language: zh-CN
+phase: archive
+status: done
+state_version: 8
+brief: brief.md
+spec_changes:
+  - capability: sample-cache-correctness
+    operation: create
+    source: specs/sample-cache-correctness/spec.md
+workspace:
+  isolation: worktree
+  change_branch: comet/repair-sample-cache-expression
+  target_branch: dev
+  finish: merge
+loop:
+  stage: done
+  goal_cycle: 1
+  iteration: 1
+  attempt: 1
+  retry_epoch: 0
+  failed_iteration_count: 0
+  no_progress_count: 0
+  execution_failure_count: 0
+  previous_unresolved_ids: []
+  next_action: null
+acceptance:
+  - id: A1
+    source: brief.md
+    text: A1：`putMultiFar2` 的 key 表达式不再引用不存在的 `getLeft()`。
+    result: passed
+    reason:
+      text: "候选将 putMultiFar2 的 key 从 #result.getLeft() 改为 #result.id，已不再引用不存在的
+        getLeft()。"
+      truncated: false
+  - id: A2
+    source: brief.md
+    text: A2：通过 Spring 代理调用 `putMultiFar2(ids, suffix)` 不出现 SpEL 方法/属性解析异常。
+    result: passed
+    reason:
+      text: FarServiceCacheTest 通过真实 Spring AOP 代理调用 putMultiFar2；Runtime 定向测试 1/1
+        通过，无 SpEL 异常。
+      truncated: false
+  - id: A3
+    source: brief.md
+    text: A3：批量写入后调用 `getFar2(id, suffix)` 能读取由对应 `Far.id` 生成的缓存项，而不执行原方法。
+    result: passed
+    reason:
+      text: 测试批量写入 id 7、9 后分别调用 getFar2，并用 assertSame 验证返回批量结果中的对应
+        Far；原方法每次都会创建新对象，因此同一引用证明两次查询均为缓存命中。
+      truncated: false
+  - id: A4
+    source: brief.md
+    text: A4：修复不改变 `far2` cache name、方法签名或返回结构。
+    result: passed
+    reason:
+      text: dev...HEAD 生产代码仅修改注解 key 字符串；far2 cache name、方法参数、Map<Integer,Object>
+        返回类型和返回结构均未改变。
+      truncated: false
+  - id: A5
+    source: specs/sample-cache-correctness/spec.md
+    text: "`FarService.putMultiFar2` 的 `@CachePut` key 表达式读取每个返回 `Far` 元素的 id 属性。"
+    result: passed
+    reason:
+      text: "#result.id 通过 Far 的 JavaBean getId() 读取实际 Far.id；项目编译与代理回归测试均通过。"
+      truncated: false
+  - id: A6
+    source: specs/sample-cache-correctness/spec.md
+    text: 表达式不得调用不存在的历史 `Pair.getLeft()` 方法。
+    result: passed
+    reason:
+      text: "完整候选 diff 已移除生产表达式里的 #result.getLeft()，新增代码也未引用历史 Pair API。"
+      truncated: false
+  - id: A7
+    source: specs/sample-cache-correctness/spec.md
+    text: 通过 Spring 缓存代理执行批量方法时不出现 SpEL 解析异常，并按 id 与 suffix 写入 `far2`。
+    result: passed
+    reason:
+      text: 测试用 AopUtils.isAopProxy 验证 FarService 为 Spring 代理，以 simple 内存缓存批量写入两个
+        id，并从同一 far2 缓存按 id 与 suffix 成功读取；Runtime 测试通过。
+      truncated: false
+  - id: A8
+    source: specs/sample-cache-correctness/spec.md
+    text: 后续单项查询能命中对应缓存值。
+    result: passed
+    reason:
+      text: 后续对 id 7 和 9 的单项查询均返回各自批量写入的同一对象引用，证明两个缓存项均被命中。
+      truncated: false
+  - id: A9
+    source: specs/sample-cache-correctness/spec.md
+    text: 仅校正表达式与增加回归测试，不改变 cache name、方法签名和返回结构。
+    result: passed
+    reason:
+      text: dev...HEAD 仅包含 FarService 一行表达式修复和新增回归测试；未修改 cache name、方法签名、返回结构或 Far 模型。
+      truncated: false
+builder_handoff:
+  candidate_id: 5bc05ff7-185b-469e-9dc2-81b3be86ca93
+  identity_provider: skill-coordinated
+  builder_execution_ref: skill-coordinated:builder:a3eb3398-eb1b-453e-afa3-c80e2fa204f5
+  iteration: 1
+  summary:
+    text: "将 FarService.putMultiFar2 的缓存键表达式从历史 Pair.getLeft() 改为 JavaBean 属性
+      #result.id；新增使用 simple 内存缓存的真实 Spring Cache 代理回归测试，验证批量写入无 SpEL 异常且两个 Far
+      均可由 getFar2(id, suffix) 直接命中。未改变 far2 cache name、方法签名、返回结构或 Far 模型。"
+    truncated: false
+  addressed_acceptance_ids:
+    - A1
+    - A2
+    - A3
+    - A4
+    - A5
+    - A6
+    - A7
+    - A8
+    - A9
+  checks:
+    - name:
+        text: FarServiceCacheTest via cache-as-multi-sample reactor
+        truncated: false
+      result: passed
+      note:
+        text: 1 test passed; real Spring proxy with spring.cache.type=simple; no Redis
+          connection. Before the production fix, the same test failed with SpEL
+          EL1004E because Far has no getLeft().
+        truncated: false
+    - name:
+        text: cache-as-multi-sample reactor package
+        truncated: false
+      result: passed
+      note:
+        text: Both cache-as-multi 1.4.0 and cache-as-multi-sample 1.0.0 packaged
+          successfully with tests skipped for this separate compile/package
+          check.
+        truncated: false
+    - name:
+        text: git diff --cached --check
+        truncated: false
+      result: passed
+      note:
+        text: No whitespace errors before commit dfd3edc.
+        truncated: false
+  checks_truncated: false
+  known_limits: []
+  known_limits_truncated: false
+  submitted_at: 2026-08-27T03:01:35.121Z
+blockers: []
+verification:
+  candidate_id: 5bc05ff7-185b-469e-9dc2-81b3be86ca93
+  identity_provider: skill-coordinated
+  verifier_execution_ref: skill-coordinated:verifier:83bc1ce9-39e9-48c1-92e7-3b95eb49aa46
+  iteration: 1
+  attempt: 1
+  assurance: skill-coordinated
+  verdict: pass
+  checks:
+    - id: sample-cache-test
+      name:
+        text: FarService cache expression proxy regression test
+        truncated: false
+      argv_display:
+        - text: -pl
+          truncated: false
+        - text: cache-as-multi-sample
+          truncated: false
+        - text: -am
+          truncated: false
+        - text: -Dtest=FarServiceCacheTest
+          truncated: false
+        - text: -Dsurefire.failIfNoSpecifiedTests=false
+          truncated: false
+        - text: test
+          truncated: false
+      argv_truncated: false
+      cwd_ref: .
+      status: passed
+      exit_code: 0
+      duration_ms: 6522
+    - id: sample-package
+      name:
+        text: Core and sample package compilation
+        truncated: false
+      argv_display:
+        - text: -pl
+          truncated: false
+        - text: cache-as-multi-sample
+          truncated: false
+        - text: -am
+          truncated: false
+        - text: -DskipTests
+          truncated: false
+        - text: package
+          truncated: false
+      argv_truncated: false
+      cwd_ref: .
+      status: passed
+      exit_code: 0
+      duration_ms: 6738
+    - id: sample-diff
+      name:
+        text: Sample candidate diff validation
+        truncated: false
+      argv_display:
+        - text: diff
+          truncated: false
+        - text: --check
+          truncated: false
+        - text: dev...HEAD
+          truncated: false
+      argv_truncated: false
+      cwd_ref: .
+      status: passed
+      exit_code: 0
+      duration_ms: 31
+  summary:
+    text: 独立只读验收通过：候选使用 Far 实际 id 属性修复表达式；测试确实经过 Spring 缓存代理，覆盖两个 id
+      的真实内存缓存命中。Runtime 定向测试、package 和 diff 检查全部通过。
+    truncated: false
+  risks: []
+  risks_truncated: false
+  completed_at: 2026-08-27T03:12:33.652Z
+history:
+  - goal_cycle: 1
+    iteration: 1
+    attempt: 1
+    outcome: pass
+    unresolved_ids: []
+    summary:
+      text: 独立只读验收通过：候选使用 Far 实际 id 属性修复表达式；测试确实经过 Spring 缓存代理，覆盖两个 id
+        的真实内存缓存命中。Runtime 定向测试、package 和 diff 检查全部通过。
+      truncated: false
+    completed_at: 2026-08-27T03:12:33.652Z
+history_overflow:
+  dropped_entries: 0
+  first_dropped_at: null
+  last_dropped_at: null
+  outcome_counts:
+    pass: 0
+    fail: 0
+    blocked: 0
+    execution-error: 0
+    recovery: 0
+verification_result: pass
+verification_report: verification.md
+archived: true
+created_at: 2026-08-27T02:47:55.516Z
