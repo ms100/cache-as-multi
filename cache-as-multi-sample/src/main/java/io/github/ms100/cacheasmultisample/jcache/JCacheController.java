@@ -71,7 +71,11 @@ class JCacheController {
         fooService.putFoo(id, "a", "AAA");
         fooService.putMultiFoo(map, "a");
         String str = fooService.getFoo(id, "a");
-        assert (id.toString() + id).equals(str);
+        String expected = id.toString() + id;
+        if (!expected.equals(str)) {
+            throw new IllegalStateException(
+                    "Expected cached value '" + expected + "' for id " + id + ", but got '" + str + "'");
+        }
     }
 
     @GetMapping("both")
