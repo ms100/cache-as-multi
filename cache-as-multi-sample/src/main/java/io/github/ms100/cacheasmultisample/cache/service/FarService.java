@@ -71,7 +71,7 @@ public class FarService {
         return "AAA";
     }
 
-    @CachePut(cacheNames = "far2", key = "#result.getLeft()+' '+#a1")
+    @CachePut(cacheNames = "far2", key = "#result.id+' '+#a1")
     public Map<Integer, Object> putMultiFar2(@CacheAsMulti Set<Integer> ids, String str) {
         System.out.println("putMultiFar2====----" + ids.toString());
 
