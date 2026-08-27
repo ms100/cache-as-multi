@@ -1,0 +1,79 @@
+schema: comet.native.children.v1
+children:
+  - name: harden-cache-adapters
+    depends_on: []
+    covers:
+      - A7
+      - A8
+      - A36
+      - A37
+      - A38
+      - A39
+      - A40
+      - A41
+      - A42
+      - A43
+      - A44
+      - A45
+  - name: generalize-async-completion-stage
+    depends_on:
+      - harden-cache-adapters
+    covers:
+      - A1
+      - A2
+      - A3
+      - A4
+      - A5
+      - A13
+      - A14
+      - A15
+      - A16
+      - A17
+      - A18
+      - A19
+      - A20
+      - A21
+      - A22
+      - A23
+      - A24
+      - A25
+      - A26
+      - A27
+      - A28
+      - A29
+      - A30
+      - A31
+      - A32
+      - A33
+  - name: repair-sample-cache-expression
+    depends_on: []
+    covers:
+      - A9
+      - A58
+      - A59
+      - A60
+      - A61
+  - name: stabilize-project-quality
+    depends_on:
+      - harden-cache-adapters
+      - generalize-async-completion-stage
+      - repair-sample-cache-expression
+    covers:
+      - A6
+      - A10
+      - A11
+      - A12
+      - A34
+      - A35
+      - A46
+      - A47
+      - A48
+      - A49
+      - A50
+      - A51
+      - A52
+      - A53
+      - A54
+      - A55
+      - A56
+      - A57
