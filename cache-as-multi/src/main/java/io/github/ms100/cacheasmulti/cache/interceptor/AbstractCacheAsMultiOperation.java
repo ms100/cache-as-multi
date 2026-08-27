@@ -16,7 +16,11 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletionStage;
+import java.util.function.Function;
 
 /**
  * @author zhumengshuai
@@ -29,6 +33,12 @@ public abstract class AbstractCacheAsMultiOperation {
     protected final ReturnTypeMaker returnTypeMaker;
 
     @Getter
+    protected final boolean returnCompletionStage;
+
+    /**
+     * @deprecated use {@link #returnCompletionStage}
+     */
+    @Deprecated
     protected final boolean returnCF;
 
     public AbstractCacheAsMultiOperation(Method method, CacheAsMultiParameterDetail parameterDetail) {
@@ -36,12 +46,17 @@ public abstract class AbstractCacheAsMultiOperation {
 
         ResolvableType returnResolvableType = ResolvableType.forMethodReturnType(method);
         Class<?> returnType = returnResolvableType.toClass();
-        if (CompletableFuture.class.isAssignableFrom(returnType)) {
+        if (CompletionStage.class.isAssignableFrom(returnType)) {
+            if (!returnType.isAssignableFrom(CompletableFuture.class)) {
+                throw new IllegalStateException("The CompletionStage return type must be assignable from " +
+                        "CompletableFuture so cache hits and composed results can be returned on " + method);
+            }
             returnResolvableType = returnResolvableType.getGeneric(0);
-            this.returnCF = true;
+            this.returnCompletionStage = true;
         } else {
-            this.returnCF = false;
+            this.returnCompletionStage = false;
         }
+        this.returnCF = this.returnCompletionStage;
 
         this.returnTypeMaker = initializeReturnTypeMaker(returnResolvableType, method, parameterDetail);
         validateParameterDetail(method, parameterDetail);
@@ -83,7 +98,7 @@ public abstract class AbstractCacheAsMultiOperation {
 
     @Nullable
     public Object makeReturnObject(Collection<?> cacheAsMultiArg, Map<?, ?> argValueMap) {
-        return makeReturnObject(cacheAsMultiArg, argValueMap, returnCF);
+        return makeReturnObject(cacheAsMultiArg, argValueMap, returnCompletionStage);
     }
 
     @Nullable
@@ -97,6 +112,56 @@ public abstract class AbstractCacheAsMultiOperation {
             return CompletableFuture.completedFuture(returnObject);
         }
         return returnObject;
+    }
+
+    /**
+     * Compatibility alias for callers compiled against the original CompletableFuture-specific name.
+     *
+     * @return whether the declared method return type implements {@link CompletionStage}
+     */
+    @Deprecated
+    public boolean isReturnCF() {
+        return returnCompletionStage;
+    }
+
+    public <T, R> CompletionStage<R> mapCompletionStage(
+            CompletionStage<T> source, Function<? super T, ? extends R> mapper) {
+
+        CompletableFuture<R> target = new CompletableFuture<>();
+        source.whenComplete((value, failure) -> {
+            if (failure == null) {
+                try {
+                    target.complete(mapper.apply(value));
+                } catch (Throwable ex) {
+                    target.completeExceptionally(ex);
+                }
+                return;
+            }
+
+            Throwable cause = unwrapCompletionException(failure);
+            if (cause instanceof CancellationException || isCancelled(source)) {
+                target.cancel(false);
+            } else {
+                target.completeExceptionally(cause);
+            }
+        });
+        return target;
+    }
+
+    private static Throwable unwrapCompletionException(Throwable failure) {
+        Throwable current = failure;
+        while (current instanceof CompletionException && current.getCause() != null) {
+            current = current.getCause();
+        }
+        return current;
+    }
+
+    private static boolean isCancelled(CompletionStage<?> source) {
+        try {
+            return source.toCompletableFuture().isCancelled();
+        } catch (UnsupportedOperationException ignored) {
+            return false;
+        }
     }
 
     @Nullable

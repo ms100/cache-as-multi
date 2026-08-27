@@ -39,7 +39,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.BiPredicate;
@@ -126,8 +126,8 @@ public class EnhancedCachingInterceptor extends CacheInterceptor {
         if (hasCachePut(contexts)) {
             Object returnValue = invokeOperation(invoker);
             CacheAsMultiOperation<?> multiOperation = contexts.getFirst(CachePutOperation.class).getMultiOperation();
-            if (multiOperation.isReturnCF() && returnValue instanceof CompletableFuture<?>) {
-                return ((CompletableFuture<?>) returnValue).thenApply(values -> {
+            if (multiOperation.isReturnCompletionStage() && returnValue instanceof CompletionStage<?>) {
+                return multiOperation.mapCompletionStage((CompletionStage<?>) returnValue, values -> {
                     processCacheWritesAndEvicts(contexts, cacheAsMultiArg, values, multiOperation);
                     return values;
                 });
@@ -143,8 +143,8 @@ public class EnhancedCachingInterceptor extends CacheInterceptor {
                 Map<?, ?> argValueMap = invocationResult.argValueMap;
                 Object returnValue = invocationResult.returnValue;
                 CacheAsMultiOperation<?> multiOperation = contexts.getFirst(CacheableOperation.class).getMultiOperation();
-                if (multiOperation.isReturnCF() && returnValue instanceof CompletableFuture<?>) {
-                    return ((CompletableFuture<?>) returnValue).thenApply(values -> {
+                if (multiOperation.isReturnCompletionStage() && returnValue instanceof CompletionStage<?>) {
+                    return multiOperation.mapCompletionStage((CompletionStage<?>) returnValue, values -> {
                         evictCacheItems(contexts, false, argValueMap);
                         return values;
                     });
@@ -155,8 +155,8 @@ public class EnhancedCachingInterceptor extends CacheInterceptor {
             else {
                 Object returnValue = invokeOperation(invoker);
                 CacheAsMultiOperation<?> multiOperation = contexts.getFirst(CacheEvictOperation.class).getMultiOperation();
-                if (multiOperation.isReturnCF() && returnValue instanceof CompletableFuture<?>) {
-                    return ((CompletableFuture<?>) returnValue).thenApply(values -> {
+                if (multiOperation.isReturnCompletionStage() && returnValue instanceof CompletionStage<?>) {
+                    return multiOperation.mapCompletionStage((CompletionStage<?>) returnValue, values -> {
                         processCacheEvicts(contexts, cacheAsMultiArg, values, multiOperation);
                         return values;
                     });
@@ -349,8 +349,8 @@ public class EnhancedCachingInterceptor extends CacheInterceptor {
 
         CacheAsMultiOperation<?> multiOperation = firstContext.getMultiOperation();
         Collection<?> cacheAsMultiArg = firstContext.getCacheAsMultiArg();
-        if (multiOperation.isReturnCF() && invokeValues instanceof CompletableFuture<?>) {
-            CompletableFuture<?> returnValue = ((CompletableFuture<?>) invokeValues).thenApply(values -> {
+        if (multiOperation.isReturnCompletionStage() && invokeValues instanceof CompletionStage<?>) {
+            CompletionStage<?> returnValue = multiOperation.mapCompletionStage((CompletionStage<?>) invokeValues, values -> {
                 Map<?, ?> missArgValueMap = multiOperation.makeCacheMap(missCacheAsMultiArg, values);
                 if (!CollectionUtils.isEmpty(missArgValueMap)) {
                     putCacheItems(cacheableContexts, missArgValueMap);
@@ -602,9 +602,9 @@ public class EnhancedCachingInterceptor extends CacheInterceptor {
                 }
                 CacheAsMultiOperationContext cacheOperationContext = cacheOperationContexts.iterator().next();
                 CacheableOperation operation = (CacheableOperation) cacheOperationContext.getOperation();
-                if (cacheOperationContext.getMultiOperation().isReturnCF()) {
+                if (cacheOperationContext.getMultiOperation().isReturnCompletionStage()) {
                     throw new IllegalStateException(
-                            "@Cacheable(sync=true) does not support CompletableFuture return type on '" + operation + "'");
+                            "@Cacheable(sync=true) does not support CompletionStage return type on '" + operation + "'");
                 }
                 if (cacheOperationContext.getCaches().size() > 1) {
                     throw new IllegalStateException(

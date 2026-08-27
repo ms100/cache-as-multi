@@ -16,7 +16,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 
 /**
@@ -86,7 +86,8 @@ class CacheResultAsMultiInterceptor extends AbstractJCacheAsMultiInterceptor<Cac
             missCacheAsMultiArg = cacheAsMultiArg;
         } else {
             Collection<Object> newMissCacheAsMultiArg = new ArrayList<>(cacheAsMultiArg.size());
-            argKeyMap.forEach((argItem, key) -> {
+            cacheAsMultiArg.forEach(argItem -> {
+                Object key = argKeyMap.get(argItem);
                 ValueWrapper valueWrapper = hitKeyValueWrapperMap.get(key);
                 if (valueWrapper != null) {
                     argValueMap.put(argItem, valueWrapper.get());
@@ -110,8 +111,9 @@ class CacheResultAsMultiInterceptor extends AbstractJCacheAsMultiInterceptor<Cac
 
         Object invokeValues = invokeOperation(context, invoker, missCacheAsMultiArg);
         CacheResultAsMultiOperation multiOperation = context.getMultiOperation();
-        if (multiOperation.isReturnCF() && invokeValues instanceof CompletableFuture<?>) {
-            return ((CompletableFuture<?>) invokeValues).thenApply(asyncValues -> cacheMissValueAndMakeReturn(context, missCacheAsMultiArg, argValueMap, asyncValues));
+        if (multiOperation.isReturnCompletionStage() && invokeValues instanceof CompletionStage<?>) {
+            return multiOperation.mapCompletionStage((CompletionStage<?>) invokeValues,
+                    asyncValues -> cacheMissValueAndMakeReturn(context, missCacheAsMultiArg, argValueMap, asyncValues));
         }
         return cacheMissValueAndMakeReturn(context, missCacheAsMultiArg, argValueMap, invokeValues);
     }
@@ -180,4 +182,3 @@ class CacheResultAsMultiInterceptor extends AbstractJCacheAsMultiInterceptor<Cac
         return ((CacheAsMultiOperationInvoker) invoker).invoke(invokeArg);
     }
 }
-
