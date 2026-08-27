@@ -54,7 +54,9 @@ application-*.yaml
 .comet/
 .superpowers/
 openspec/
-docs/
+# Keep ordinary documentation local, while allowing Comet's versioned
+# specifications and archive records to be committed.
+docs/*
+!docs/comet/
 .codex/
 .gemini/
-
