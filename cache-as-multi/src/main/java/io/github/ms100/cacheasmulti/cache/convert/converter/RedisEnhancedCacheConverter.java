@@ -2,7 +2,6 @@ package io.github.ms100.cacheasmulti.cache.convert.converter;
 
 import io.github.ms100.cacheasmulti.cache.EnhancedCache;
 import io.github.ms100.cacheasmulti.util.CollectionUtils;
-import lombok.SneakyThrows;
 import org.springframework.data.redis.cache.RedisCache;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheWriter;
@@ -10,7 +9,9 @@ import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisStringCommands;
 import org.springframework.data.redis.core.types.Expiration;
 import org.springframework.lang.Nullable;
+import org.springframework.util.Assert;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.time.Duration;
 import java.util.Arrays;
@@ -38,7 +39,6 @@ public class RedisEnhancedCacheConverter implements EnhancedCacheConverter<Redis
         private static final String CACHE_WRITER_CLASS = "org.springframework.data.redis.cache.DefaultRedisCacheWriter";
         private final Method executeMethod;
 
-        @SneakyThrows
         protected RedisEnhancedCache(String name, RedisCacheWriter cacheWriter, RedisCacheConfiguration cacheConfig) {
             super(name, cacheWriter, cacheConfig);
             Class<? extends RedisCacheWriter> cacheWriterClass = getNativeCache().getClass();
@@ -46,12 +46,11 @@ public class RedisEnhancedCacheConverter implements EnhancedCacheConverter<Redis
                 throw new IllegalStateException("cacheWriterClass must be " + CACHE_WRITER_CLASS);
             }
 
-            executeMethod = cacheWriterClass.getDeclaredMethod("execute", String.class, Function.class);
+            executeMethod = getRequiredDeclaredMethod(cacheWriterClass, "execute", String.class, Function.class);
             executeMethod.setAccessible(true);
         }
 
         @Override
-        @SneakyThrows
         public Map<Object, ValueWrapper> multiGet(Collection<?> keys) {
             Object[] keyArr = keys.toArray(new Object[0]);
             byte[][] bytes = Arrays.stream(keyArr).map(this::createAndConvertCacheKey).toArray(byte[][]::new);
@@ -81,7 +80,8 @@ public class RedisEnhancedCacheConverter implements EnhancedCacheConverter<Redis
             Map<byte[], byte[]> collect = stream.collect(Collectors.toMap(
                     entry -> createAndConvertCacheKey(entry.getKey()), entry -> {
                         Object cacheValue = preProcessCacheValue(entry.getValue());
-                        assert cacheValue != null;
+                        Assert.state(cacheValue != null,
+                                "Pre-processed cache value must not be null for cache '" + getName() + "'");
                         return serializeCacheValue(cacheValue);
                     }));
 
@@ -126,9 +126,32 @@ public class RedisEnhancedCacheConverter implements EnhancedCacheConverter<Redis
             return ttl != null && !ttl.isZero() && !ttl.isNegative();
         }
 
-        @SneakyThrows
         private <T> T execute(Function<RedisConnection, T> callback) {
-            return (T) executeMethod.invoke(getNativeCache(), getName(), callback);
+            try {
+                return (T) executeMethod.invoke(getNativeCache(), getName(), callback);
+            } catch (InvocationTargetException e) {
+                Throwable cause = e.getTargetException();
+                if (cause instanceof RuntimeException) {
+                    throw (RuntimeException) cause;
+                }
+                if (cause instanceof Error) {
+                    throw (Error) cause;
+                }
+                throw new IllegalStateException("Redis cache writer method '" + executeMethod.getName()
+                        + "' failed for type " + getNativeCache().getClass().getName(), cause);
+            } catch (IllegalAccessException e) {
+                throw new IllegalStateException("Cannot access required method '" + executeMethod.getName()
+                        + "' on type " + getNativeCache().getClass().getName(), e);
+            }
+        }
+    }
+
+    static Method getRequiredDeclaredMethod(Class<?> targetType, String methodName, Class<?>... parameterTypes) {
+        try {
+            return targetType.getDeclaredMethod(methodName, parameterTypes);
+        } catch (NoSuchMethodException e) {
+            throw new IllegalStateException("Required method '" + methodName + "' not found on type "
+                    + targetType.getName(), e);
         }
     }
 }

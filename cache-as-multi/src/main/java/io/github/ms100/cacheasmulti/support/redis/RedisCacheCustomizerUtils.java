@@ -14,10 +14,18 @@ public abstract class RedisCacheCustomizerUtils {
     private static final Field DEFAULT_CACHE_CONFIGURATION_FIELD;
 
     static {
-        DEFAULT_CACHE_CONFIGURATION_FIELD = ReflectionUtils.findField(RedisCacheManager.RedisCacheManagerBuilder.class,
+        DEFAULT_CACHE_CONFIGURATION_FIELD = getRequiredField(RedisCacheManager.RedisCacheManagerBuilder.class,
                 "defaultCacheConfiguration", RedisCacheConfiguration.class);
-        assert DEFAULT_CACHE_CONFIGURATION_FIELD != null;
         ReflectionUtils.makeAccessible(DEFAULT_CACHE_CONFIGURATION_FIELD);
+    }
+
+    static Field getRequiredField(Class<?> targetType, String fieldName, Class<?> fieldType) {
+        Field field = ReflectionUtils.findField(targetType, fieldName, fieldType);
+        if (field == null) {
+            throw new IllegalStateException("Required field '" + fieldName + "' not found on type "
+                    + targetType.getName());
+        }
+        return field;
     }
 
     public static RedisCacheConfiguration getDefaultCacheConfigurationFor(RedisCacheManager.RedisCacheManagerBuilder builder) {
