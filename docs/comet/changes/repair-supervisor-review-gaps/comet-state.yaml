@@ -1,0 +1,159 @@
+schema: comet.native.v4
+name: repair-supervisor-review-gaps
+language: zh-CN
+phase: build
+status: active
+state_version: 2
+brief: brief.md
+spec_changes:
+  - capability: cache-adapter-reliability
+    operation: modify
+    source: specs/cache-adapter-reliability/spec.md
+workspace:
+  isolation: worktree
+  change_branch: comet/repair-supervisor-review-gaps
+  target_branch: dev
+  finish: null
+loop:
+  stage: building
+  goal_cycle: 1
+  iteration: 1
+  attempt: 0
+  retry_epoch: 0
+  failed_iteration_count: 0
+  no_progress_count: 0
+  execution_failure_count: 0
+  previous_unresolved_ids: []
+  next_action: submit-builder-candidate
+acceptance:
+  - id: A1
+    source: brief.md
+    text: A1：JCache 必需内部字段不存在时抛出 `IllegalStateException`，消息同时包含实际 operation
+      类型与请求的字段名，不再产生 `NullPointerException`。
+    result: pending
+    reason: null
+  - id: A2
+    source: brief.md
+    text: A2：回归测试直接覆盖 JCache 字段缺失诊断，并确认正常字段解析与既有 JCache 批量缓存测试仍通过。
+    result: pending
+    reason: null
+  - id: A3
+    source: brief.md
+    text: A3：sample `putFoo` 在缓存返回期望值时保持正常完成；返回不一致时即使 JVM 未启用 `-ea` 也抛出包含上下文的显式
+      `IllegalStateException`。
+    result: pending
+    reason: null
+  - id: A4
+    source: brief.md
+    text: A4：核心库与 sample 的全部 `src/main` Java 源码不再包含用于必需成员、缓存值或不可达状态校验的 Java `assert`。
+    result: pending
+    reason: null
+  - id: A5
+    source: brief.md
+    text: A5：完整 Java 8 reactor 构建无需外部 Redis 并通过，既有 CompletionStage、缓存适配器与 sample
+      回归不受影响。
+    result: pending
+    reason: null
+  - id: A6
+    source: brief.md
+    text: A6：交付报告明确列出两次 10 秒请求线程等待的文件位置、运行影响和后续移除建议，并继续列出 Spring 内部耦合、过期依赖和 smoke
+      coverage 风险；未修复事项不标记为已修复。
+    result: pending
+    reason: null
+  - id: A7
+    source: brief.md
+    text: A7：实现差异只包含上述诊断、显式校验、回归测试与正式产物，不改变公共缓存接口和正常批量语义。
+    result: pending
+    reason: null
+  - id: A8
+    source: specs/cache-adapter-reliability/spec.md
+    text: "`ConcurrentMapCache` 的批量写入必须对每个值调用与单条 `put` 一致的 `toStoreValue` 转换。"
+    result: pending
+    reason: null
+  - id: A9
+    source: specs/cache-adapter-reliability/spec.md
+    text: 实际写入 native store 的必须是转换后的映射，不得在构造转换映射后仍写入原始输入。
+    result: pending
+    reason: null
+  - id: A10
+    source: specs/cache-adapter-reliability/spec.md
+    text: 允许 null 时，null 必须转换为 Spring 的内部 null holder，不能直接写入不允许 null 的
+      `ConcurrentHashMap`。
+    result: pending
+    reason: null
+  - id: A11
+    source: specs/cache-adapter-reliability/spec.md
+    text: store-by-value 模式继续使用源 cache 的序列化配置，批量读写语义与单条读写一致。
+    result: pending
+    reason: null
+  - id: A12
+    source: specs/cache-adapter-reliability/spec.md
+    text: 对 Spring 2.2 内部字段或方法的反射依赖在初始化时验证；成员缺失时抛出包含实际目标类型与成员名的明确
+      `IllegalStateException`。
+    result: pending
+    reason: null
+  - id: A13
+    source: specs/cache-adapter-reliability/spec.md
+    text: JCache operation 的 `keyParameterDetails`、`allParameterDetails`
+      等内部字段存在时保持既有解析结果；字段缺失不得退化为无上下文的 `NullPointerException`。
+    result: pending
+    reason: null
+  - id: A14
+    source: specs/cache-adapter-reliability/spec.md
+    text: 生产代码不得依赖默认关闭的 Java `assert` 验证必需成员、必需值、缓存结果或不可达状态；该约束同时覆盖核心库与 sample 生产源码。
+    result: pending
+    reason: null
+  - id: A15
+    source: specs/cache-adapter-reliability/spec.md
+    text: sample 对缓存写入后结果的演示校验必须在默认 JVM 配置下生效；不一致时抛出包含期望条件与实际结果上下文的显式运行时异常。
+    result: pending
+    reason: null
+  - id: A16
+    source: specs/cache-adapter-reliability/spec.md
+    text: Redis writer 的反射调用若由底层抛出运行时异常，应传播底层运行时异常或保留其直接 cause，不得只暴露
+      `InvocationTargetException` 导致代理转为 `UndeclaredThrowableException`。
+    result: pending
+    reason: null
+  - id: A17
+    source: specs/cache-adapter-reliability/spec.md
+    text: 加固不改变当前受支持缓存后端的公共接口和正常批量语义。
+    result: pending
+    reason: null
+  - id: A18
+    source: specs/cache-adapter-reliability/spec.md
+    text: 回归测试覆盖 ConcurrentMap 的 null 值与 store-by-value 批量写入。
+    result: pending
+    reason: null
+  - id: A19
+    source: specs/cache-adapter-reliability/spec.md
+    text: 单元测试覆盖 JCache、ConcurrentMap、Redis 等反射成员解析失败消息和反射调用底层异常展开，且不连接 Redis。
+    result: pending
+    reason: null
+  - id: A20
+    source: specs/cache-adapter-reliability/spec.md
+    text: sample 显式校验测试覆盖缓存结果一致与不一致路径，不依赖 JVM `-ea`。
+    result: pending
+    reason: null
+  - id: A21
+    source: specs/cache-adapter-reliability/spec.md
+    text: 静态检查覆盖全部生产 Java 源码，确保没有 Java `assert` 承担运行时正确性校验。
+    result: pending
+    reason: null
+builder_handoff: null
+blockers: []
+verification: null
+history: []
+history_overflow:
+  dropped_entries: 0
+  first_dropped_at: null
+  last_dropped_at: null
+  outcome_counts:
+    pass: 0
+    fail: 0
+    blocked: 0
+    execution-error: 0
+    recovery: 0
+verification_result: pending
+verification_report: null
+archived: false
+created_at: 2026-08-27T08:05:02.255Z
