@@ -77,3 +77,15 @@ children:
       - A55
       - A56
       - A57
+  - name: repair-supervisor-review-gaps
+    depends_on:
+      - harden-cache-adapters
+      - generalize-async-completion-stage
+      - repair-sample-cache-expression
+      - stabilize-project-quality
+    covers:
+      - A6
+      - A8
+      - A35
+      - A40
+      - A41

@@ -57,6 +57,7 @@
 - 大型需求拆分为四个可独立验收的 child：先加固缓存适配器；随后推进 CompletionStage；sample 修复可独立进行；最后在集成结果上稳定完整测试与项目卫生。
 - 用户已确认先实施第一波 `harden-cache-adapters` 与 `repair-sample-cache-expression`；第一波分别验收并合入 Supervisor 分支后，再按依赖进入后续波次。
 - 用户已在阅读第一波缺陷、触发条件、影响和修复方向后授权开始实现；目标、范围、验收标准、关键约束与非目标均已确认。
+- Supervisor 最终验收发现 A6、A8、A35、A40、A41 仍有遗漏；用户确认追加唯一 repair child `repair-supervisor-review-gaps`，只替换 sample 生产 Java `assert`、加固 JCache 内部字段缺失诊断并补全未纳入风险报告，不重开四个已归档 child，也不在本轮修复 sample 请求路径的两次 10 秒等待。
 
 # Open questions
 

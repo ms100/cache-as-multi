@@ -3,21 +3,21 @@ name: review-and-generalize-async-api
 language: zh-CN
 phase: build
 status: active
-state_version: 2
+state_version: 7
 brief: brief.md
-children_contract_hash: 8edaf311a2eaa0d42fbc94c8a9746d15b2dcd98e18cbc49af3ac7f4b1d8cbdd3
+children_contract_hash: f32ae836649842d85dfc8ee0e08aa72d0b8af0f362767fec34fcc4ac8061d3cf
 spec_changes:
   - capability: async-batch-cache
-    operation: create
+    operation: modify
     source: specs/async-batch-cache/spec.md
   - capability: cache-adapter-reliability
-    operation: create
+    operation: modify
     source: specs/cache-adapter-reliability/spec.md
   - capability: project-test-quality
-    operation: create
+    operation: modify
     source: specs/project-test-quality/spec.md
   - capability: sample-cache-correctness
-    operation: create
+    operation: modify
     source: specs/sample-cache-correctness/spec.md
 workspace:
   isolation: current
@@ -26,7 +26,7 @@ workspace:
   finish: null
 loop:
   stage: building
-  goal_cycle: 1
+  goal_cycle: 2
   iteration: 1
   attempt: 0
   retry_epoch: 0
@@ -363,7 +363,37 @@ acceptance:
 builder_handoff: null
 blockers: []
 verification: null
-history: []
+history:
+  - goal_cycle: 1
+    iteration: 1
+    attempt: 1
+    outcome: fail
+    unresolved_ids:
+      - A6
+      - A8
+      - A35
+      - A40
+      - A41
+    summary:
+      text: 集成候选 0b117d4 的四个 child 均已 finish=merge、归档且各自 Verifier
+        pass；CompletionStage/CompletableFuture 非阻塞组合、取消/异常/eviction
+        语义，ConcurrentMap/Redis 适配器，JDK proxy/无 Redis 测试，sample SpEL 及 Java 8
+        clean package 均有充分通过证据。但 Supervisor 完整规格仍有可直接定位的遗漏：sample 生产代码继续用 Java
+        assert 校验缓存值，Spring JCacheOperation 内部字段缺失仍抛
+        NullPointerException，且这些发现未进入后续风险报告。因此 A6、A8、A35、A40、A41 未通过，当前 verdict
+        为 fail；无需追加 Runtime checks，下一轮可通过单一 repair child
+        修复显式校验/反射诊断并补充全项目静态扫描与风险报告。
+      truncated: false
+    completed_at: 2026-08-27T07:31:05.323Z
+  - goal_cycle: 1
+    iteration: 2
+    attempt: 0
+    outcome: recovery
+    unresolved_ids: []
+    summary:
+      text: Native child declarations changed
+      truncated: false
+    completed_at: 2026-08-27T07:32:16.481Z
 history_overflow:
   dropped_entries: 0
   first_dropped_at: null
