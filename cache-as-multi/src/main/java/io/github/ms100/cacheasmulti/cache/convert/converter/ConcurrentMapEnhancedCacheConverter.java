@@ -2,7 +2,6 @@ package io.github.ms100.cacheasmulti.cache.convert.converter;
 
 import io.github.ms100.cacheasmulti.cache.EnhancedCache;
 import io.github.ms100.cacheasmulti.util.CollectionUtils;
-import lombok.SneakyThrows;
 import org.springframework.cache.concurrent.ConcurrentMapCache;
 import org.springframework.core.serializer.support.SerializationDelegate;
 import org.springframework.lang.Nullable;
@@ -17,29 +16,39 @@ import java.util.concurrent.ConcurrentMap;
  */
 public class ConcurrentMapEnhancedCacheConverter implements EnhancedCacheConverter<ConcurrentMapCache> {
 
+    private static final String SERIALIZATION_FIELD_NAME = "serialization";
     private static final Field SERIALIZATION_FIELD;
 
     static {
-        try {
-            SERIALIZATION_FIELD = ConcurrentMapCache.class.getDeclaredField("serialization");
-        } catch (NoSuchFieldException e) {
-            throw new RuntimeException(e);
-        }
+        SERIALIZATION_FIELD = getRequiredDeclaredField(ConcurrentMapCache.class, SERIALIZATION_FIELD_NAME);
         SERIALIZATION_FIELD.setAccessible(true);
     }
 
-    @SneakyThrows
     @Override
     public EnhancedCache convert(ConcurrentMapCache source) {
         SerializationDelegate serialization;
         if (source.isStoreByValue()) {
-            serialization = (SerializationDelegate) SERIALIZATION_FIELD.get(source);
+            try {
+                serialization = (SerializationDelegate) SERIALIZATION_FIELD.get(source);
+            } catch (IllegalAccessException e) {
+                throw new IllegalStateException("Cannot access required field '" + SERIALIZATION_FIELD_NAME
+                        + "' on type " + ConcurrentMapCache.class.getName(), e);
+            }
         } else {
             serialization = null;
         }
 
         return new ConcurrentMapEnhancedCache(source.getName(), source.getNativeCache(),
                 source.isAllowNullValues(), serialization);
+    }
+
+    static Field getRequiredDeclaredField(Class<?> targetType, String fieldName) {
+        try {
+            return targetType.getDeclaredField(fieldName);
+        } catch (NoSuchFieldException e) {
+            throw new IllegalStateException("Required field '" + fieldName + "' not found on type "
+                    + targetType.getName(), e);
+        }
     }
 
     public static class ConcurrentMapEnhancedCache extends ConcurrentMapCache implements EnhancedCache {
@@ -62,13 +71,12 @@ public class ConcurrentMapEnhancedCacheConverter implements EnhancedCacheConvert
         }
 
         @Override
-        @SneakyThrows
         public void multiPut(Map<?, ?> map) {
             Map<Object, Object> newMap = CollectionUtils.newHashMap(map.size());
             map.forEach((k, v) -> newMap.put(k, toStoreValue(v)));
 
             ConcurrentMap<Object, Object> store = getNativeCache();
-            store.putAll(map);
+            store.putAll(newMap);
         }
 
         @Override
