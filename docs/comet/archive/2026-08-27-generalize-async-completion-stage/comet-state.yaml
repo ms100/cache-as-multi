@@ -1,0 +1,408 @@
+schema: comet.native.v4
+name: generalize-async-completion-stage
+language: zh-CN
+phase: archive
+status: done
+state_version: 8
+brief: brief.md
+spec_changes:
+  - capability: async-batch-cache
+    operation: create
+    source: specs/async-batch-cache/spec.md
+workspace:
+  isolation: worktree
+  change_branch: comet/generalize-async-completion-stage
+  target_branch: dev
+  finish: merge
+loop:
+  stage: done
+  goal_cycle: 1
+  iteration: 1
+  attempt: 1
+  retry_epoch: 0
+  failed_iteration_count: 0
+  no_progress_count: 0
+  execution_failure_count: 0
+  previous_unresolved_ids: []
+  next_action: null
+acceptance:
+  - id: A1
+    source: brief.md
+    text: A1：声明返回 `CompletionStage<Map<K,V>>` 或 `CompletionStage<List<V>>` 的 Spring
+      Cache 批量方法在全命中、全未命中和部分命中时均返回正确结果，并按元素读写缓存。
+    result: passed
+    reason:
+      text: CompletionStageCacheAsMultiTest verifies Spring CompletionStage Map/List
+        initial all-miss, subsequent full-hit, and partial-hit behavior; only
+        missing elements are loaded and results are cached per element.
+      truncated: false
+  - id: A2
+    source: brief.md
+    text: A2：声明返回 `CompletionStage<Map<K,V>>` 或 `CompletionStage<List<V>>` 的 JCache
+      `@CacheResult` 批量方法使用同样的异步完成语义。
+    result: passed
+    reason:
+      text: CompletionStageJCacheAsMultiTest verifies JCache @CacheResult
+        CompletionStage Map/List all-miss, full-hit, and partial-hit paths,
+        including ordered List reconstruction.
+      truncated: false
+  - id: A3
+    source: brief.md
+    text: A3：异步阶段仅在正常完成后执行缓存写入与 after-invocation eviction；异常完成或取消不会产生缓存条目，异常通过返回阶段传播。
+    result: passed
+    reason:
+      text: Deferred CachePut and CacheEvict tests prove side effects occur after
+        normal completion; exceptional and canceled
+        Cacheable/CachePut/after-evict stages produce no success-dependent cache
+        effects and propagate failure.
+      truncated: false
+  - id: A4
+    source: brief.md
+    text: A4：`@Cacheable(sync=true)` 与任意 `CompletionStage` 返回类型组合时仍在初始化/调用阶段给出明确拒绝信息。
+    result: passed
+    reason:
+      text: synchronizedCacheableRejectsCompletionStageWithExplicitMessage passes, and
+        EnhancedCachingInterceptor rejects every detected CompletionStage with
+        an error containing CompletionStage.
+      truncated: false
+  - id: A5
+    source: brief.md
+    text: A5：现有声明为 `CompletableFuture` 的批量方法保持可用；文档和新增测试以更抽象的 `CompletionStage`
+      为主，并覆盖 Map/List、部分命中、`strictNull`、`asElementField`、异常与取消。
+    result: passed
+    reason:
+      text: Six CompletableFuture regression tests pass; new CompletionStage tests
+        cover Map, List, partial hits, strictNull, asElementField, exceptions,
+        and cancellation, while README/Javadoc now lead with CompletionStage.
+      truncated: false
+  - id: A6
+    source: specs/async-batch-cache/spec.md
+    text: 当带有 `@CacheAsMulti` 的批量方法返回 `CompletionStage<Map<K,V>>` 或
+      `CompletionStage<List<V>>` 时，框架按集合元素执行缓存读取，并在异步计算正常完成后按元素执行缓存写入或
+      after-invocation eviction。该能力同时适用于 Spring Cache 与 JCache
+      `@CacheResult`，并兼容具体返回类型 `CompletableFuture`。
+    result: passed
+    reason:
+      text: Spring and JCache interceptors use the shared CompletionStage
+        detection/composition helpers; focused integration tests confirm
+        per-element reads and success-only writes/evictions while
+        CompletableFuture remains functional.
+      truncated: false
+  - id: A7
+    source: specs/async-batch-cache/spec.md
+    text: 框架应以方法声明返回类型是否实现 `CompletionStage` 判断异步批量缓存，而不是只识别 `CompletableFuture`。
+    result: passed
+    reason:
+      text: AbstractCacheAsMultiOperation uses
+        CompletionStage.class.isAssignableFrom(declaredReturnType), and both
+        Spring and JCache execution paths test instanceof CompletionStage rather
+        than CompletableFuture.
+      truncated: false
+  - id: A8
+    source: specs/async-batch-cache/spec.md
+    text: 异步返回的第一个泛型参数必须继续满足既有 Map/List 批量返回约束。
+    result: passed
+    reason:
+      text: The constructor unwraps CompletionStage's first generic argument before
+        the existing MapReturnTypeMaker/ListReturnTypeMaker validation;
+        unsupported result shapes still yield the existing initialization
+        rejection.
+      truncated: false
+  - id: A9
+    source: specs/async-batch-cache/spec.md
+    text: "`CompletableFuture` 是受支持的 `CompletionStage` 实现，既有方法无需迁移即可继续工作。"
+    result: passed
+    reason:
+      text: CompletableFutureCacheAsMultiTest passes all 6 regressions; the compiled
+        class retains public isReturnCF().
+      truncated: false
+  - id: A10
+    source: specs/async-batch-cache/spec.md
+    text: 非 `CompletionStage` 的 Map/List 返回类型继续走既有同步路径。
+    result: passed
+    reason:
+      text: Only declared CompletionStage types enter the new async branch;
+        non-CompletionStage Map/List construction and synchronous interceptor
+        paths are unchanged.
+      truncated: false
+  - id: A11
+    source: specs/async-batch-cache/spec.md
+    text: 全部元素命中缓存时，框架返回一个已正常完成的阶段，其值按既有 Map/List、顺序、`strictNull` 和 `asElementField`
+      规则构造。
+    result: passed
+    reason:
+      text: Full-hit tests for Spring and JCache return completed stages with correct
+        Map/List values and List order; Spring tests also verify strictNull and
+        asElementField hit reconstruction.
+      truncated: false
+  - id: A12
+    source: specs/async-batch-cache/spec.md
+    text: 部分元素未命中时，只以未命中元素调用原方法；原阶段正常完成后，将新结果与命中结果合并，再完成返回阶段。
+    result: passed
+    reason:
+      text: Spring and JCache partial-hit tests assert only missing elements reach
+        source methods and returned results merge hits and misses in requested
+        order.
+      truncated: false
+  - id: A13
+    source: specs/async-batch-cache/spec.md
+    text: 全部元素未命中时，原阶段正常完成后写入各元素缓存；返回值保持原有批量结果语义。
+    result: passed
+    reason:
+      text: Each Map/List integration test starts from an empty cache, verifies
+        all-miss, then verifies an identical invocation is a full hit without
+        another source load.
+      truncated: false
+  - id: A14
+    source: specs/async-batch-cache/spec.md
+    text: 处理过程不得通过 `get`、`join` 或其他方式阻塞调用线程等待结果。
+    result: passed
+    reason:
+      text: Static scan found no CompletionStage/CompletableFuture get() or join()
+        waits in production interceptor paths; composition uses whenComplete
+        callbacks.
+      truncated: false
+  - id: A15
+    source: specs/async-batch-cache/spec.md
+    text: Cacheable/CachePut 的缓存写入以及 after-invocation CacheEvict 仅在原阶段正常完成后执行。
+    result: passed
+    reason:
+      text: mapCompletionStage invokes the mapper only on normal completion; Spring
+        writes and after-invocation eviction are inside it, with deferred tests
+        confirming timing.
+      truncated: false
+  - id: A16
+    source: specs/async-batch-cache/spec.md
+    text: 原阶段异常完成或取消时，不执行依赖成功结果的缓存写入和 after-invocation eviction。
+    result: passed
+    reason:
+      text: Exceptional and canceled Spring Cacheable/CachePut/after-evict tests and
+        JCache @CacheResult tests confirm no success-dependent side effects.
+      truncated: false
+  - id: A17
+    source: specs/async-batch-cache/spec.md
+    text: 返回给调用方的组合阶段传播原失败；框架不吞掉异常，也不把失败结果当作普通缓存值。
+    result: passed
+    reason:
+      text: mapCompletionStage propagates the unwrapped source failure; Spring and
+        JCache tests observe the original IllegalStateException as cause.
+      truncated: false
+  - id: A18
+    source: specs/async-batch-cache/spec.md
+    text: 当源阶段以取消结束时，返回阶段的 `toCompletableFuture()` 也应处于 cancelled 状态，`join()` 继续抛出
+      `CancellationException`，而不是变成包装该异常的普通 exceptional completion。
+    result: passed
+    reason:
+      text: Spring, JCache, and wrapped-cancellation tests confirm returned futures
+        remain canceled and join throws CancellationException.
+      truncated: false
+  - id: A19
+    source: specs/async-batch-cache/spec.md
+    text: before-invocation eviction 保持既有同步触发时机。
+    result: passed
+    reason:
+      text: beforeInvocationEvictionRemainsImmediate verifies eviction before pending
+        source completion and on later cancellation.
+      truncated: false
+  - id: A20
+    source: specs/async-batch-cache/spec.md
+    text: Spring Cache 的 `@Cacheable`、`@CachePut`、`@CacheEvict`
+      组合继续遵守现有优先级、condition/unless 与元素级 key 语义。
+    result: passed
+    reason:
+      text: EnhancedCachingInterceptor preserves existing operation priority,
+        conditions, unless handling, element key generation, writes, and
+        eviction ordering.
+      truncated: false
+  - id: A21
+    source: specs/async-batch-cache/spec.md
+    text: JCache `@CacheResult` 使用同样的 `CompletionStage` 识别与正常完成后写缓存语义。
+    result: passed
+    reason:
+      text: CacheResultAsMultiInterceptor uses shared CompletionStage success-only
+        mapping; JCache normal, failure, cancellation, and order tests pass.
+      truncated: false
+  - id: A22
+    source: specs/async-batch-cache/spec.md
+    text: "`@Cacheable(sync=true)` 不支持任何 `CompletionStage` 返回类型，并提供包含
+      `CompletionStage` 的明确错误信息。"
+    result: passed
+    reason:
+      text: The sync=true guard checks isReturnCompletionStage() and emits an explicit
+        CompletionStage error; its focused test passes.
+      truncated: false
+  - id: A23
+    source: specs/async-batch-cache/spec.md
+    text: "`@CacheAsMulti` Javadoc、中英文 README 和示例以 `CompletionStage` 描述公共能力，可使用
+      `CompletableFuture` 创建实际阶段。"
+    result: passed
+    reason:
+      text: Javadoc and both READMEs describe CompletionStage publicly, use
+        CompletableFuture in examples, and Java 8 Javadoc generation succeeds.
+      truncated: false
+  - id: A24
+    source: specs/async-batch-cache/spec.md
+    text: 用户已存在的 `CompletableFuture<Map<...>>` 与 `CompletableFuture<List<...>>`
+      方法继续受支持。
+    result: passed
+    reason:
+      text: Existing CompletableFuture Map/List declarations remain accepted and all 6
+        compatibility tests pass.
+      truncated: false
+  - id: A25
+    source: specs/async-batch-cache/spec.md
+    text: 不改变同步 Map/List 方法和现有缓存后端的公共接口。
+    result: passed
+    reason:
+      text: Production changes are limited to documentation and interceptor internals;
+        cache backend APIs and synchronous result makers are untouched, with
+        compatibility aliases retained.
+      truncated: false
+  - id: A26
+    source: specs/async-batch-cache/spec.md
+    text: 测试覆盖 Map、List、全命中、部分命中、`strictNull`、`asElementField`、异常与取消路径。
+    result: passed
+    reason:
+      text: Focused suite ran 24 tests with 0 failures/errors and covers all required
+        async paths and compatibility cases.
+      truncated: false
+builder_handoff:
+  candidate_id: 148c6d98-8553-4adc-81a0-378e42704502
+  identity_provider: skill-coordinated
+  builder_execution_ref: skill-coordinated:builder:6d348a1e-3fdc-4779-87e8-d5a111c67e79
+  iteration: 1
+  summary:
+    text: 将异步批量缓存从具体 CompletableFuture 抽象为 CompletionStage，统一 Spring Cache 与 JCache
+      的非阻塞组合、正常完成后副作用、异常和取消传播；保留 CompletableFuture 与 returnCF 兼容；补齐
+      Map/List、部分命中、strictNull、asElementField、CachePut/CacheEvict、sync=true、JCache
+      顺序和窄 Stage 诊断回归；更新中英文文档与 Javadoc。提交
+      7633e5844130cfe506d34e58917ce0a0992efbe0。
+    truncated: false
+  addressed_acceptance_ids:
+    - A1
+    - A2
+    - A3
+    - A4
+    - A5
+    - A6
+    - A7
+    - A8
+    - A9
+    - A10
+    - A11
+    - A12
+    - A13
+    - A14
+    - A15
+    - A16
+    - A17
+    - A18
+    - A19
+    - A20
+    - A21
+    - A22
+    - A23
+    - A24
+    - A25
+    - A26
+  checks:
+    - name:
+        text: focused CompletionStage and CompletableFuture regression tests
+        truncated: false
+      result: passed
+      note:
+        text: CacheAsMultiOperationTest、CompletionStageCacheAsMultiTest、CompletionStageJCacheAsMultiTest、CompletableFutureCacheAsMultiTest
+          共 24 tests，0 failures，0 errors。
+        truncated: false
+    - name:
+        text: Java 8 package and Javadoc
+        truncated: false
+      result: passed
+      note:
+        text: Corretto 1.8.0_492 下 Maven package 与 javadoc:javadoc 成功；仅有项目既有
+          javax.annotation.meta.When 缺失警告。
+        truncated: false
+    - name:
+        text: async production-path static scan and diff check
+        truncated: false
+      result: passed
+      note:
+        text: 异步拦截器生产路径未发现 CompletionStage/CompletableFuture 的阻塞 get/join；git diff
+          --check 通过；公共文档不再限定为 CompletableFuture。
+        truncated: false
+    - name:
+        text: pre-merge code review
+        truncated: false
+      result: passed
+      note:
+        text: 独立 reviewer 无 Critical；两项 Important 与两项 Minor 均已核验并处理，包括取消 fallback、窄
+          Stage 诊断、returnCF 字段兼容与 Spring List 部分命中覆盖。
+        truncated: false
+  checks_truncated: false
+  known_limits:
+    - text: 完整模块测试 55 tests 中 41 通过、14 个既有失败：13 个因测试按实现类注入 JDK 代理导致
+        BeanNotOfRequiredTypeException，1 个 TypeMethodKeyGeneratorTest 旧期望错误；均属于
+        Supervisor 已分配给 stabilize-project-quality child 的非目标。
+      truncated: false
+    - text: 方法声明支持 CompletionStage 或 CompletableFuture；无法由组合 CompletableFuture
+        赋值的更窄自定义 Stage 子类型会在初始化时收到明确错误，以避免代理返回阶段的 ClassCastException。
+      truncated: false
+  known_limits_truncated: false
+  submitted_at: 2026-08-27T04:23:54.460Z
+blockers: []
+verification:
+  candidate_id: 148c6d98-8553-4adc-81a0-378e42704502
+  identity_provider: skill-coordinated
+  verifier_execution_ref: skill-coordinated:verifier:57e6bc89-79e4-4cdb-87af-74b9e3100dc8
+  iteration: 1
+  attempt: 1
+  assurance: skill-coordinated
+  verdict: pass
+  checks: []
+  summary:
+    text: Pass. Independent focused Maven verification completed 24 tests with zero
+      failures or errors. Candidate 7633e5844130cfe506d34e58917ce0a0992efbe0
+      compiled and packaged under Corretto Java 8, generated Javadoc, used no
+      blocking async waits, preserved cancellation, fixed JCache List order,
+      retained compatibility aliases, and changed no cache-backend API.
+    truncated: false
+  risks:
+    - text: "The complete module suite still has 14 out-of-scope failures: 13
+        BeanNotOfRequiredType injection failures and one stale
+        TypeMethodKeyGeneratorTest expectation; the candidate diff does not
+        touch their causes."
+      truncated: false
+    - text: A declared custom CompletionStage subtype that cannot receive a composed
+        CompletableFuture is intentionally rejected with a clear initialization
+        error; this limitation is documented.
+      truncated: false
+  risks_truncated: false
+  completed_at: 2026-08-27T04:30:29.323Z
+history:
+  - goal_cycle: 1
+    iteration: 1
+    attempt: 1
+    outcome: pass
+    unresolved_ids: []
+    summary:
+      text: Pass. Independent focused Maven verification completed 24 tests with zero
+        failures or errors. Candidate 7633e5844130cfe506d34e58917ce0a0992efbe0
+        compiled and packaged under Corretto Java 8, generated Javadoc, used no
+        blocking async waits, preserved cancellation, fixed JCache List order,
+        retained compatibility aliases, and changed no cache-backend API.
+      truncated: false
+    completed_at: 2026-08-27T04:30:29.323Z
+history_overflow:
+  dropped_entries: 0
+  first_dropped_at: null
+  last_dropped_at: null
+  outcome_counts:
+    pass: 0
+    fail: 0
+    blocked: 0
+    execution-error: 0
+    recovery: 0
+verification_result: pass
+verification_report: verification.md
+archived: true
+created_at: 2026-08-27T03:46:36.295Z
