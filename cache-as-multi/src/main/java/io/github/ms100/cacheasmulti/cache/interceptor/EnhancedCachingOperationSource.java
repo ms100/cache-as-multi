@@ -2,6 +2,7 @@ package io.github.ms100.cacheasmulti.cache.interceptor;
 
 import io.github.ms100.cacheasmulti.cache.annotation.CacheAsMultiAnnotationUtils;
 import io.github.ms100.cacheasmulti.cache.annotation.CacheAsMultiParameterDetail;
+import org.springframework.aop.support.AopUtils;
 import org.springframework.cache.annotation.AnnotationCacheOperationSource;
 import org.springframework.cache.interceptor.CacheOperation;
 import org.springframework.lang.Nullable;
@@ -26,7 +27,15 @@ public class EnhancedCachingOperationSource extends AnnotationCacheOperationSour
         }
 
         Object cacheKey = getCacheKey(method, targetClass);
-        return cacheAsMultiOperationsCache.get(cacheKey);
+        Collection<CacheAsMultiOperation<?>> operations = cacheAsMultiOperationsCache.get(cacheKey);
+        if (operations == null && targetClass != null) {
+            Method specificMethod = AopUtils.getMostSpecificMethod(method, targetClass);
+            if (!specificMethod.equals(method)) {
+                operations = cacheAsMultiOperationsCache.get(
+                        getCacheKey(specificMethod, specificMethod.getDeclaringClass()));
+            }
+        }
+        return operations;
     }
 
     @Override

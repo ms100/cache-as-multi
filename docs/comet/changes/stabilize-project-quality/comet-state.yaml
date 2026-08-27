@@ -1,0 +1,138 @@
+schema: comet.native.v4
+name: stabilize-project-quality
+language: zh-CN
+phase: build
+status: active
+state_version: 2
+brief: brief.md
+spec_changes:
+  - capability: project-test-quality
+    operation: create
+    source: specs/project-test-quality/spec.md
+workspace:
+  isolation: worktree
+  change_branch: comet/stabilize-project-quality
+  target_branch: dev
+  finish: null
+loop:
+  stage: building
+  goal_cycle: 1
+  iteration: 1
+  attempt: 0
+  retry_epoch: 0
+  failed_iteration_count: 0
+  no_progress_count: 0
+  execution_failure_count: 0
+  previous_unresolved_ids: []
+  next_action: submit-builder-candidate
+acceptance:
+  - id: A1
+    source: brief.md
+    text: A1：针对本 child 纳入的审阅问题提供能够在修复前失败、修复后通过的回归测试；未纳入问题不伪装为已修复。
+    result: pending
+    reason: null
+  - id: A2
+    source: brief.md
+    text: A2：从干净构建开始运行完整 Maven reactor 测试时，无需本机 Redis 或其他外部服务即可通过。
+    result: pending
+    reason: null
+  - id: A3
+    source: brief.md
+    text: A3：历史测试不再包含 10 秒级固定等待；`TypeMethodKeyGenerator` 测试验证实际方法名隔离语义；异步测试覆盖 Spring
+      Cache 与 JCache 的正常、异常及取消路径。
+    result: pending
+    reason: null
+  - id: A4
+    source: brief.md
+    text: A4：完整 reactor 可完成库、源码、Javadoc 与 sample 的编译打包；仓库不再跟踪 `.DS_Store`。
+    result: pending
+    reason: null
+  - id: A5
+    source: brief.md
+    text: A5：对纳入范围的审阅问题保留可验证的回归证据。
+    result: pending
+    reason: null
+  - id: A6
+    source: brief.md
+    text: A6：其余项目审阅发现说明影响、证据与建议，并明确标记为后续事项。
+    result: pending
+    reason: null
+  - id: A7
+    source: specs/project-test-quality/spec.md
+    text: A7：默认测试配置使用内存缓存，不连接本机或远程 Redis。
+    result: pending
+    reason: null
+  - id: A8
+    source: specs/project-test-quality/spec.md
+    text: A8：Redis 专属序列化、TTL 或 writer 行为使用 mock/stub/单元边界验证；需要真实 Redis
+      的测试必须显式隔离，不能阻断默认 `mvn test`。
+    result: pending
+    reason: null
+  - id: A9
+    source: specs/project-test-quality/spec.md
+    text: A9：Spring 测试代理方式与测试注入类型一致，完整上下文不因 JDK proxy/具体类类型不匹配而失败。
+    result: pending
+    reason: null
+  - id: A10
+    source: specs/project-test-quality/spec.md
+    text: A10：默认测试不包含 10 秒级固定 `Thread.sleep`，不依赖墙钟等待 TTL。
+    result: pending
+    reason: null
+  - id: A11
+    source: specs/project-test-quality/spec.md
+    text: A11：测试使用 JUnit 断言而不是可能被 JVM 关闭的 Java `assert`。
+    result: pending
+    reason: null
+  - id: A12
+    source: specs/project-test-quality/spec.md
+    text: A12：`TypeMethodKeyGenerator` 测试验证不同实际方法名产生不同前缀，并验证相同方法/参数的稳定性。
+    result: pending
+    reason: null
+  - id: A13
+    source: specs/project-test-quality/spec.md
+    text: A13：Spring Cache 与 JCache 均有 CompletionStage 正常完成、异常完成与取消不写缓存的自动化覆盖。
+    result: pending
+    reason: null
+  - id: A14
+    source: specs/project-test-quality/spec.md
+    text: A14：sample 有自动化测试执行 `putMultiFar2` 的 SpEL 键表达式，确保属性与返回元素类型匹配。
+    result: pending
+    reason: null
+  - id: A15
+    source: specs/project-test-quality/spec.md
+    text: A15：从干净输出开始运行完整 reactor 测试无需外部服务并通过。
+    result: pending
+    reason: null
+  - id: A16
+    source: specs/project-test-quality/spec.md
+    text: A16：完整 package 构建库 jar、source jar、Javadoc jar 与 sample；不要求发布凭据或签名材料。
+    result: pending
+    reason: null
+  - id: A17
+    source: specs/project-test-quality/spec.md
+    text: A17：已被 `.gitignore` 忽略的 `.DS_Store` 不再受版本控制。
+    result: pending
+    reason: null
+  - id: A18
+    source: specs/project-test-quality/spec.md
+    text: A18：仍需后续处理的架构风险和依赖版本风险在交付报告中列明，不用纯风格改动扩大本次 diff。
+    result: pending
+    reason: null
+builder_handoff: null
+blockers: []
+verification: null
+history: []
+history_overflow:
+  dropped_entries: 0
+  first_dropped_at: null
+  last_dropped_at: null
+  outcome_counts:
+    pass: 0
+    fail: 0
+    blocked: 0
+    execution-error: 0
+    recovery: 0
+verification_result: pending
+verification_report: null
+archived: false
+created_at: 2026-08-27T06:49:37.468Z

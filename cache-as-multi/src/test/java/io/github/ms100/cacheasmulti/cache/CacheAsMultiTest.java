@@ -3,7 +3,7 @@ package io.github.ms100.cacheasmulti.cache;
 import io.github.ms100.cacheasmulti.cache.service.BoxService;
 import io.github.ms100.cacheasmulti.cache.service.BusService;
 import io.github.ms100.cacheasmulti.cache.service.FarService;
-import io.github.ms100.cacheasmulti.cache.service.NewBarServiceImpl;
+import io.github.ms100.cacheasmulti.cache.service.NewBarService;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +21,7 @@ import java.util.Set;
 @SpringBootTest
 class CacheAsMultiTest {
     @Autowired
-    private NewBarServiceImpl barService;
+    private NewBarService barService;
     @Autowired
     private FarService farService;
     @Autowired
