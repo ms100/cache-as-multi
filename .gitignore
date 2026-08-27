@@ -58,5 +58,7 @@ openspec/
 # specifications and archive records to be committed.
 docs/*
 !docs/comet/
+docs/comet/archive/2026-08-17-review-current-branch/
+docs/comet/specs/branch-review/
 .codex/
 .gemini/
