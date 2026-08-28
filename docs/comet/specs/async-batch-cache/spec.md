@@ -38,6 +38,8 @@
 - 用户已存在的 `CompletableFuture<Map<...>>` 与 `CompletableFuture<List<...>>` 方法继续受支持。
 - 不改变同步 Map/List 方法和现有缓存后端的公共接口。
 
-## 验证
+## 审阅与验证
 
 - 测试覆盖 Map、List、全命中、部分命中、`strictNull`、`asElementField`、异常与取消路径。
+- 对本 change 纳入的审阅问题提供能够在修复前失败、修复后通过的回归测试。
+- 其余项目审阅发现应说明影响、证据与建议，并明确标记为后续事项。

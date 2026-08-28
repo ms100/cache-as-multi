@@ -1,0 +1,112 @@
+---
+generated_from_state_version: 12
+---
+
+# Verification
+
+## Current result
+
+- Result: **Passed**
+- Assurance: **skill-coordinated**
+- Goal cycle: 2
+- Iteration: 1
+- Verifier attempt: 1
+- Completed: 2026-08-27T09:34:58.245Z
+- Summary: 独立只读终验通过：已核对 Supervisor brief、四份完整目标 Spec、五个归档 child、当前 dev 实现和 fresh Runtime 报告。Java 8 clean package 退出 0，核心 61 项与 sample 3 项零失败，静态与产物门禁通过；第一轮失败的 A6、A8、A35、A40、A41 已关闭，A1-A61 恰好全部 passed。
+
+## Acceptance
+
+| ID | Result | Source | Criterion | Reason |
+| --- | --- | --- | --- | --- |
+| A1 | passed | brief.md | A1：声明返回 `CompletionStage<Map<K,V>>` 或 `CompletionStage<List<V>>` 的 Spring Cache 批量方法在全命中、全未命中和部分命中时均返回正确结果，并按元素读写缓存。 | Spring CompletionStage Map/List 测试覆盖全未命中、全命中和部分命中，部分命中只加载缺失元素。 |
+| A2 | passed | brief.md | A2：声明返回 `CompletionStage<Map<K,V>>` 或 `CompletionStage<List<V>>` 的 JCache `@CacheResult` 批量方法使用同样的异步完成语义。 | JCache CompletionStage Map/List 测试覆盖全未命中、全命中、部分命中及 List 顺序。 |
+| A3 | passed | brief.md | A3：异步阶段仅在正常完成后执行缓存写入与 after-invocation eviction；异常完成或取消不会产生缓存条目，异常通过返回阶段传播。 | 共享阶段映射仅在正常完成时执行副作用；异常和取消测试证明不写缓存且传播失败。 |
+| A4 | passed | brief.md | A4：`@Cacheable(sync=true)` 与任意 `CompletionStage` 返回类型组合时仍在初始化/调用阶段给出明确拒绝信息。 | sync=true 与 CompletionStage 组合会抛出包含 CompletionStage 的明确异常，测试通过。 |
+| A5 | passed | brief.md | A5：现有声明为 `CompletableFuture` 的批量方法保持可用；文档和新增测试以更抽象的 `CompletionStage` 为主，并覆盖 Map/List、部分命中、`strictNull`、`asElementField`、异常与取消。 | CompletableFuture 六项兼容测试通过；CompletionStage 测试覆盖 Map/List、部分命中、strictNull、asElementField、异常和取消。 |
+| A6 | passed | brief.md | A6：针对本次纳入范围的审阅发现提供回归测试；未纳入的发现按严重度、依据和建议方式报告，不伪装为已修复。 | 纳入问题均有回归测试，未纳入事项在 risks 中明确标为未修复并说明影响、证据和建议。 |
+| A7 | passed | brief.md | A7：ConcurrentMap 批量写入实际使用经过 `toStoreValue` 转换的映射，允许 null 时不再向 `ConcurrentHashMap` 写入原始 null，并覆盖 store-by-value/null 回归测试。 | ConcurrentMap multiPut 写入逐值 toStoreValue 后的映射，null holder 与 store-by-value 测试通过。 |
+| A8 | passed | brief.md | A8：生产代码不再用 Java `assert` 校验必需的 Spring 内部成员或缓存值；反射成员缺失给出明确异常，Redis 反射调用传播底层运行时原因而非无信息的包装异常。 | 生产源码无 Java assert；JCache 缺失字段、sample 显式校验和 Redis 根因展开均已实现并测试。 |
+| A9 | passed | brief.md | A9：sample 的 `putMultiFar2` 使用 `Far` 实际存在的 id 属性生成键，并有自动化测试触发该缓存表达式。 | putMultiFar2 使用 #result.id，真实 Spring 代理测试验证两个 id 的缓存命中。 |
+| A10 | passed | brief.md | A10：从干净构建开始运行完整 Maven reactor 测试时，无需本机 Redis 或其他外部服务即可通过。 | Corretto Java 8 fresh clean package 退出 0，核心 61 项与 sample 3 项通过且未连接外部 Redis。 |
+| A11 | passed | brief.md | A11：历史测试不再包含 10 秒级固定等待；`TypeMethodKeyGenerator` 测试验证实际方法名隔离语义；异步测试覆盖 Spring Cache 与 JCache 的正常、异常及取消路径。 | 测试源码无 10 秒级等待；TypeMethodKeyGenerator 与 Spring/JCache 异步正常、异常、取消测试通过。 |
+| A12 | passed | brief.md | A12：完整 reactor 可完成库、源码、Javadoc 与 sample 的编译打包；仓库不再跟踪 `.DS_Store`。 | 主 jar、sources jar、Javadoc jar、sample jar 均生成，仓库未跟踪 .DS_Store。 |
+| A13 | passed | specs/async-batch-cache/spec.md | 当带有 `@CacheAsMulti` 的批量方法返回 `CompletionStage<Map<K,V>>` 或 `CompletionStage<List<V>>` 时，框架按集合元素执行缓存读取，并在异步计算正常完成后按元素执行缓存写入或 after-invocation eviction。该能力同时适用于 Spring Cache 与 JCache `@CacheResult`，并兼容具体返回类型 `CompletableFuture`。 | Spring 与 JCache 拦截器共享 CompletionStage 识别和非阻塞映射，并兼容 CompletableFuture。 |
+| A14 | passed | specs/async-batch-cache/spec.md | 框架应以方法声明返回类型是否实现 `CompletionStage` 判断异步批量缓存，而不是只识别 `CompletableFuture`。 | 声明类型通过 CompletionStage.class.isAssignableFrom 识别，运行时按 instanceof CompletionStage 处理。 |
+| A15 | passed | specs/async-batch-cache/spec.md | 异步返回的第一个泛型参数必须继续满足既有 Map/List 批量返回约束。 | CompletionStage 泛型结果继续由既有 Map/List return maker 校验，非法形状明确拒绝。 |
+| A16 | passed | specs/async-batch-cache/spec.md | `CompletableFuture` 是受支持的 `CompletionStage` 实现，既有方法无需迁移即可继续工作。 | 既有 CompletableFuture Map/List 声明和六项兼容测试保持通过，兼容别名保留。 |
+| A17 | passed | specs/async-batch-cache/spec.md | 非 `CompletionStage` 的 Map/List 返回类型继续走既有同步路径。 | 只有 CompletionStage 声明进入异步分支，同步 Map/List 路径和测试保持不变。 |
+| A18 | passed | specs/async-batch-cache/spec.md | 全部元素命中缓存时，框架返回一个已正常完成的阶段，其值按既有 Map/List、顺序、`strictNull` 和 `asElementField` 规则构造。 | 全命中返回已完成阶段，Map/List、顺序、strictNull 和 asElementField 重建测试通过。 |
+| A19 | passed | specs/async-batch-cache/spec.md | 部分元素未命中时，只以未命中元素调用原方法；原阶段正常完成后，将新结果与命中结果合并，再完成返回阶段。 | 部分命中仅用缺失元素调用原方法，正常完成后合并命中与新结果，Spring/JCache 测试通过。 |
+| A20 | passed | specs/async-batch-cache/spec.md | 全部元素未命中时，原阶段正常完成后写入各元素缓存；返回值保持原有批量结果语义。 | 全未命中正常完成后逐元素写缓存，后续相同调用全命中且保持批量返回语义。 |
+| A21 | passed | specs/async-batch-cache/spec.md | 处理过程不得通过 `get`、`join` 或其他方式阻塞调用线程等待结果。 | 异步组合使用 whenComplete；静态门禁未发现 join 或 toCompletableFuture().get 阻塞。 |
+| A22 | passed | specs/async-batch-cache/spec.md | Cacheable/CachePut 的缓存写入以及 after-invocation CacheEvict 仅在原阶段正常完成后执行。 | Cacheable、CachePut 写入及 after-invocation eviction 均在成功 mapper 内，延迟测试验证时机。 |
+| A23 | passed | specs/async-batch-cache/spec.md | 原阶段异常完成或取消时，不执行依赖成功结果的缓存写入和 after-invocation eviction。 | 异常或取消不调用成功 mapper，Spring/JCache 测试证明无成功依赖副作用。 |
+| A24 | passed | specs/async-batch-cache/spec.md | 返回给调用方的组合阶段传播原失败；框架不吞掉异常，也不把失败结果当作普通缓存值。 | 组合阶段传播原始失败原因，不吞异常且不把失败作为缓存值。 |
+| A25 | passed | specs/async-batch-cache/spec.md | 当源阶段以取消结束时，返回阶段的 `toCompletableFuture()` 也应处于 cancelled 状态，`join()` 继续抛出 `CancellationException`，而不是变成包装该异常的普通 exceptional completion。 | 取消会取消目标 future；Spring、JCache 和包装取消测试验证 isCancelled 与 CancellationException。 |
+| A26 | passed | specs/async-batch-cache/spec.md | before-invocation eviction 保持既有同步触发时机。 | before-invocation eviction 在调用原方法前同步执行，源阶段未完成时已完成清除。 |
+| A27 | passed | specs/async-batch-cache/spec.md | Spring Cache 的 `@Cacheable`、`@CachePut`、`@CacheEvict` 组合继续遵守现有优先级、condition/unless 与元素级 key 语义。 | Spring Cache 操作优先级、condition/unless 与元素级 key 路径保留，同步和异步回归通过。 |
+| A28 | passed | specs/async-batch-cache/spec.md | JCache `@CacheResult` 使用同样的 `CompletionStage` 识别与正常完成后写缓存语义。 | JCache @CacheResult 使用共享 CompletionStage 成功映射，正常、异常、取消测试通过。 |
+| A29 | passed | specs/async-batch-cache/spec.md | `@Cacheable(sync=true)` 不支持任何 `CompletionStage` 返回类型，并提供包含 `CompletionStage` 的明确错误信息。 | 任何识别出的 CompletionStage 与 sync=true 组合均明确拒绝，错误信息与测试符合要求。 |
+| A30 | passed | specs/async-batch-cache/spec.md | `@CacheAsMulti` Javadoc、中英文 README 和示例以 `CompletionStage` 描述公共能力，可使用 `CompletableFuture` 创建实际阶段。 | Javadoc 和中英文 README 以 CompletionStage 描述能力，以 CompletableFuture 构造示例，并记录限制。 |
+| A31 | passed | specs/async-batch-cache/spec.md | 用户已存在的 `CompletableFuture<Map<...>>` 与 `CompletableFuture<List<...>>` 方法继续受支持。 | 现有 CompletableFuture Map/List 方法无需迁移，六项专门兼容测试通过。 |
+| A32 | passed | specs/async-batch-cache/spec.md | 不改变同步 Map/List 方法和现有缓存后端的公共接口。 | 未改变同步 Map/List 方法和缓存后端公共接口，完整同步回归通过。 |
+| A33 | passed | specs/async-batch-cache/spec.md | 测试覆盖 Map、List、全命中、部分命中、`strictNull`、`asElementField`、异常与取消路径。 | Spring/JCache CompletionStage 测试覆盖 Map、List、全命中、部分命中、strictNull、asElementField、异常和取消。 |
+| A34 | passed | specs/async-batch-cache/spec.md | 对本 change 纳入的审阅问题提供能够在修复前失败、修复后通过的回归测试。 | ConcurrentMap、Redis、JDK proxy、sample SpEL、JCache 缺失字段和 sample 显式校验均有红绿回归证据。 |
+| A35 | passed | specs/async-batch-cache/spec.md | 其余项目审阅发现应说明影响、证据与建议，并明确标记为后续事项。 | risks 完整披露 sample 阻塞、Spring 内部耦合、过期依赖、smoke coverage 和自定义 Stage 限制。 |
+| A36 | passed | specs/cache-adapter-reliability/spec.md | `ConcurrentMapCache` 的批量写入必须对每个值调用与单条 `put` 一致的 `toStoreValue` 转换。 | ConcurrentMap multiPut 对每个输入值调用与单条 put 一致的 toStoreValue。 |
+| A37 | passed | specs/cache-adapter-reliability/spec.md | 实际写入 native store 的必须是转换后的映射，不得在构造转换映射后仍写入原始输入。 | native store 最终接收转换后的 newMap，而不是原始输入映射。 |
+| A38 | passed | specs/cache-adapter-reliability/spec.md | 允许 null 时，null 必须转换为 Spring 的内部 null holder，不能直接写入不允许 null 的 `ConcurrentHashMap`。 | 允许 null 时写入 Spring null holder，测试验证 native value 非 null 且读取还原 null。 |
+| A39 | passed | specs/cache-adapter-reliability/spec.md | store-by-value 模式继续使用源 cache 的序列化配置，批量读写语义与单条读写一致。 | 增强缓存复用源 serialization delegate，store-by-value 批量测试验证序列化副本与读回语义。 |
+| A40 | passed | specs/cache-adapter-reliability/spec.md | 对 Spring 2.2 内部字段或方法的反射依赖在初始化时验证；成员缺失时抛出包含目标类型与成员名的明确 `IllegalStateException`。 | ConcurrentMap、Redis、JCache 反射成员均显式验证；缺失异常包含目标类型和成员名，正常 JCache 解析未回归。 |
+| A41 | passed | specs/cache-adapter-reliability/spec.md | 生产代码不得依赖默认关闭的 Java `assert` 验证必需成员、必需值或不可达状态。 | Runtime 扫描全部生产 Java 无语言级 assert，必需成员和值均使用始终生效的显式校验。 |
+| A42 | passed | specs/cache-adapter-reliability/spec.md | Redis writer 的反射调用若由底层抛出运行时异常，应传播底层运行时异常或保留其直接 cause，不得只暴露 `InvocationTargetException` 导致代理转为 `UndeclaredThrowableException`。 | Redis 反射调用直接传播 RuntimeException/Error，其他原因保留为直接 cause，mock 测试通过。 |
+| A43 | passed | specs/cache-adapter-reliability/spec.md | 加固不改变当前受支持缓存后端的公共接口和正常批量语义。 | 适配器加固未改变公共接口，完整 64 项 reactor 测试未发现正常批量语义回归。 |
+| A44 | passed | specs/cache-adapter-reliability/spec.md | 回归测试覆盖 ConcurrentMap 的 null 值与 store-by-value 批量写入。 | ConcurrentMap 测试覆盖 null holder、store-by-value 和字段诊断并通过。 |
+| A45 | passed | specs/cache-adapter-reliability/spec.md | 单元测试覆盖反射成员解析失败消息和反射调用底层异常展开，且不连接 Redis。 | JCache、ConcurrentMap、Redis 单测覆盖成员缺失消息和底层异常展开，Redis 均为 mock。 |
+| A46 | passed | specs/project-test-quality/spec.md | 默认测试配置使用内存缓存，不连接本机或远程 Redis。 | 默认测试配置使用 simple 内存缓存，fresh 构建没有 Redis 连接尝试。 |
+| A47 | passed | specs/project-test-quality/spec.md | Redis 专属序列化、TTL 或 writer 行为使用 mock/stub/单元边界验证；需要真实 Redis 的测试必须显式隔离，不能阻断默认 `mvn test`。 | Redis TTL、序列化和 writer 行为使用 mock 边界验证，默认 reactor 不依赖真实 Redis。 |
+| A48 | passed | specs/project-test-quality/spec.md | Spring 测试代理方式与测试注入类型一致，完整上下文不因 JDK proxy/具体类类型不匹配而失败。 | 测试按接口注入匹配 JDK proxy，operation source 回退到最具体实现方法，完整上下文通过。 |
+| A49 | passed | specs/project-test-quality/spec.md | 默认测试不包含 10 秒级固定 `Thread.sleep`，不依赖墙钟等待 TTL。 | 测试源码无 10000ms 或更长 Thread.sleep，TTL 直接检查配置；sample 生产等待另列风险。 |
+| A50 | passed | specs/project-test-quality/spec.md | 测试使用 JUnit 断言而不是可能被 JVM 关闭的 Java `assert`。 | 全部测试源码无语言级 Java assert，相关测试使用 JUnit 断言。 |
+| A51 | passed | specs/project-test-quality/spec.md | `TypeMethodKeyGenerator` 测试验证不同实际方法名产生不同前缀，并验证相同方法/参数的稳定性。 | TypeMethodKeyGeneratorTest 验证不同方法名前缀隔离及相同方法参数的稳定性。 |
+| A52 | passed | specs/project-test-quality/spec.md | Spring Cache 与 JCache 均有 CompletionStage 正常完成、异常完成与取消不写缓存的自动化覆盖。 | Spring 13 项与 JCache 4 项 CompletionStage 测试覆盖正常、异常、取消及不写缓存语义。 |
+| A53 | passed | specs/project-test-quality/spec.md | sample 有自动化测试执行 `putMultiFar2` 的 SpEL 键表达式，确保属性与返回元素类型匹配。 | FarServiceCacheTest 经真实 AOP 代理执行 #result.id 表达式并验证两个缓存项。 |
+| A54 | passed | specs/project-test-quality/spec.md | 从干净输出开始运行完整 reactor 测试无需外部服务并通过。 | Java 8 fresh clean reactor package 在无外部服务条件下通过，核心 61、sample 3 项零失败。 |
+| A55 | passed | specs/project-test-quality/spec.md | 完整 package 构建库 jar、source jar、Javadoc jar 与 sample；不要求发布凭据或签名材料。 | 完整 package 生成库 jar、source jar、Javadoc jar 和 sample jar，无发布凭据要求。 |
+| A56 | passed | specs/project-test-quality/spec.md | 已被 `.gitignore` 忽略的 `.DS_Store` 不再受版本控制。 | 仓库已删除受控 .DS_Store，Runtime git ls-files 门禁确认没有残留。 |
+| A57 | passed | specs/project-test-quality/spec.md | 仍需后续处理的架构风险和依赖版本风险在交付报告中列明，不用纯风格改动扩大本次 diff。 | 架构、依赖与测试覆盖风险均列为后续事项，实现差异未被纯风格修改扩大。 |
+| A58 | passed | specs/sample-cache-correctness/spec.md | `FarService.putMultiFar2` 的 `@CachePut` key 表达式必须读取 `Far` 实际公开的 id 属性。 | FarService.putMultiFar2 的 @CachePut key 使用 Far 的公开 id 属性 #result.id。 |
+| A59 | passed | specs/sample-cache-correctness/spec.md | 批量方法按每个返回元素计算 key 时不得调用不存在的历史 `Pair.getLeft()` API。 | 生产表达式已移除不存在的 #result.getLeft() 历史 Pair API。 |
+| A60 | passed | specs/sample-cache-correctness/spec.md | sample 通过 Spring 缓存拦截器实际执行该方法时，不出现 SpEL 方法/属性解析异常，并能按 id 写入和读取对应缓存。 | 真实代理测试批量写入两个 Far 后按 id 与 suffix 命中缓存，无 SpEL 异常。 |
+| A61 | passed | specs/sample-cache-correctness/spec.md | 修复仅校正失效表达式，不改变 sample 的 cache name、参数或返回类型。 | sample 修复仅替换 key 表达式，cache name、参数、返回类型和返回结构均未改变。 |
+
+## Checks
+
+| Check | Command | Working directory | Status | Exit | Duration |
+| --- | --- | --- | --- | ---: | ---: |
+| Java 8 clean reactor package | JAVA_HOME=/Users/ms/Library/Java/JavaVirtualMachines/corretto-1.8.0_492/Contents/Home /Applications/IntelliJ IDEA.app/Contents/plugins/maven/lib/maven3/bin/mvn -q clean package | . | passed | 0 | 15122 ms |
+| Supervisor source, repository, and artifact gates | -lc git diff --check && ! rg -n '\bassert\s+' --glob '**/src/main/**/*.java' --glob '!**/target/**' && ! rg -n '\bassert\s+' --glob '**/src/test/**/*.java' --glob '!**/target/**' && ! rg -n 'Thread\.sleep\((10000\|[1-9][0-9]{4,})\)' --glob '**/src/test/**/*.java' --glob '!**/target/**' && ! rg -n '\.join\s*\(\|toCompletableFuture\(\)\.get\s*\(' cache-as-multi/src/main/java/io/github/ms100/cacheasmulti/cache/interceptor cache-as-multi/src/main/java/io/github/ms100/cacheasmulti/jcache/interceptor && ! git ls-files \| rg -q '(^\|/)\.DS_Store$' && test -f cache-as-multi/target/cache-as-multi-1.4.0.jar && test -f cache-as-multi/target/cache-as-multi-1.4.0-sources.jar && test -f cache-as-multi/target/cache-as-multi-1.4.0-javadoc.jar && test -f cache-as-multi-sample/target/cache-as-multi-sample-1.0.0.jar | . | passed | 0 | 87 ms |
+
+## Blockers
+
+_None._
+
+## Risks and skipped work
+
+- 未修复（高影响 sample 性能风险）：cache-as-multi-sample/src/main/java/io/github/ms100/cacheasmultisample/jcache/JCacheController.java:50、52 各保留一次 Thread.sleep(10000)。单次 getFoo 请求约占用 servlet 请求线程 20 秒，会降低并发容量并可能造成排队或超时；后续应改为确定性、无需墙钟等待的演示，或异步非阻塞流程。
+- 未修复（中等升级风险）：缓存增强仍耦合 Spring 2.2 的内部字段、私有方法和 bean 名。当前诊断已加固，但升级仍可能破坏兼容性；建议集中到版本化兼容层并进行升级矩阵验证。
+- 未修复（高维护和安全风险）：Spring Boot 2.2、Spring Framework 5.2 及配套 Spring Data Redis 依赖已停止主流维护；建议单独安排升级、安全审计和完整兼容性回归。
+- 未修复（中等测试风险）：部分历史测试仍偏 smoke coverage 和控制台输出，业务断言密度及边界覆盖不足；建议逐步改为状态和副作用断言。
+- 已记录的兼容性限制（未修复）：框架以 CompletableFuture 承载全命中和组合结果，不能接收 CompletableFuture 的更窄自定义 CompletionStage 子类型会在初始化时被明确拒绝；若未来支持任意自定义 Stage，需要返回阶段工厂或适配 SPI。
+
+## Previous iterations
+
+| Goal cycle | Iteration | Attempt | Outcome | Unresolved | Summary | Completed |
+| ---: | ---: | ---: | --- | --- | --- | --- |
+| 1 | 1 | 1 | fail | A6, A8, A35, A40, A41 | 集成候选 0b117d4 的四个 child 均已 finish=merge、归档且各自 Verifier pass；CompletionStage/CompletableFuture 非阻塞组合、取消/异常/eviction 语义，ConcurrentMap/Redis 适配器，JDK proxy/无 Redis 测试，sample SpEL 及 Java 8 clean package 均有充分通过证据。但 Supervisor 完整规格仍有可直接定位的遗漏：sample 生产代码继续用 Java assert 校验缓存值，Spring JCacheOperation 内部字段缺失仍抛 NullPointerException，且这些发现未进入后续风险报告。因此 A6、A8、A35、A40、A41 未通过，当前 verdict 为 fail；无需追加 Runtime checks，下一轮可通过单一 repair child 修复显式校验/反射诊断并补充全项目静态扫描与风险报告。 | 2026-08-27T07:31:05.323Z |
+| 1 | 2 | 0 | recovery | — | Native child declarations changed | 2026-08-27T07:32:16.481Z |
+| 2 | 1 | 1 | pass | — | 独立只读终验通过：已核对 Supervisor brief、四份完整目标 Spec、五个归档 child、当前 dev 实现和 fresh Runtime 报告。Java 8 clean package 退出 0，核心 61 项与 sample 3 项零失败，静态与产物门禁通过；第一轮失败的 A6、A8、A35、A40、A41 已关闭，A1-A61 恰好全部 passed。 | 2026-08-27T09:34:58.245Z |
+
+## Conclusion
+
+独立只读终验通过：已核对 Supervisor brief、四份完整目标 Spec、五个归档 child、当前 dev 实现和 fresh Runtime 报告。Java 8 clean package 退出 0，核心 61 项与 sample 3 项零失败，静态与产物门禁通过；第一轮失败的 A6、A8、A35、A40、A41 已关闭，A1-A61 恰好全部 passed。
