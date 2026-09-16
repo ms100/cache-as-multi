@@ -11,7 +11,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
-public class NewBarServiceImpl extends BarServiceImpl {
+public class NewBarServiceImpl extends BarServiceImpl implements NewBarService {
 
     @Cacheable(cacheNames = "newBar", key = "#a0+' '+#str")
     public String getBar(Integer id, String str) {
@@ -20,7 +20,7 @@ public class NewBarServiceImpl extends BarServiceImpl {
     }
 
     @Override
-    public Map<Integer, String> getMultiBar(Set<Integer> ids, String str) {
+    public Map<Integer, String> getMultiBar(@CacheAsMulti Set<Integer> ids, String str) {
         System.out.println("getMultiBar====----" + ids.toString());
         return ids.stream().collect(Collectors.toMap(
                 id -> id,

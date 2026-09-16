@@ -5,7 +5,6 @@ import io.github.ms100.cacheasmulti.jcache.service.BagService;
 import io.github.ms100.cacheasmulti.jcache.service.CarService;
 import io.github.ms100.cacheasmulti.jcache.service.DemoService;
 import io.github.ms100.cacheasmulti.jcache.service.FooService;
-import lombok.SneakyThrows;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,16 +46,13 @@ class CacheAsMultiTest {
     private final Set<Integer> ids = new HashSet<>(idList);
 
     @Test
-    @SneakyThrows
     void getFoo() {
         fooService.delMultiFoo(ids, "a", "b");
         fooService.getFoo(id, "a");
         System.out.println(fooService.getMultiFoo(ids, "a"));
         fooService.delFoo(id, "a", "b");
         System.out.println(fooService.getMultiFoo(ids, "a"));
-        Thread.sleep(10000);
         System.out.println(fooService.getMultiFoo(ids, "a"));
-        Thread.sleep(10000);
         System.out.println(fooService.getMultiFoo(ids, "a"));
 
     }

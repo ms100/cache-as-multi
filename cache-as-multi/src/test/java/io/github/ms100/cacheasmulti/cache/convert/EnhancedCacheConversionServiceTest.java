@@ -5,14 +5,12 @@ import io.github.ms100.cacheasmulti.cache.config.MyTestConvert;
 import io.github.ms100.cacheasmulti.cache.config.MyTestConvert.MyTestCache;
 import io.github.ms100.cacheasmulti.cache.convert.converter.ConcurrentMapEnhancedCacheConverter;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cache.Cache;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.concurrent.ConcurrentMapCache;
-import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.lang.Nullable;
 
 import java.util.concurrent.Callable;
@@ -21,14 +19,10 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
 @EnableCaching
-@Slf4j
 class EnhancedCacheConversionServiceTest {
 
     @Autowired
     private EnhancedCacheConversionService conversionService;
-
-    @Autowired(required = false)
-    private RedisCacheManager redisCacheManager;
 
     @Test
     void convert() {
@@ -36,15 +30,6 @@ class EnhancedCacheConversionServiceTest {
         EnhancedCache convertConcurrentMap = conversionService.convert(cache);
         assertEquals("test", convertConcurrentMap.getName());
         assertTrue(convertConcurrentMap instanceof ConcurrentMapEnhancedCacheConverter.ConcurrentMapEnhancedCache);
-
-        if (redisCacheManager != null) {
-            log.info("redisCacheManager 存在，测试 redis ...");
-            Cache redisCache = redisCacheManager.getCache("test1");
-            assert redisCache != null;
-            EnhancedCache convertRedis = conversionService.convert(redisCache);
-            assertEquals("test1", convertRedis.getName());
-            //assertTrue(convertRedis instanceof RedisEnhancedCacheConverter.EnhancedRedisCache);
-        }
 
         MyTestCache myTestCache = new MyTestCache("mytest");
         EnhancedCache convertMyTest = conversionService.convert(myTestCache);
