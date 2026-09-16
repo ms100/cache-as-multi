@@ -11,11 +11,33 @@
 <dependency>
     <groupId>io.github.ms100</groupId>
     <artifactId>cache-as-multi</artifactId>
-    <version>1.3.1</version>
+    <version>1.4.0</version>
 </dependency>
 ```
 
 ## Recent Updates
+
+### v1.4
+
+Batch cache methods now support asynchronous return types of `CompletionStage<Map<K, V>>` and
+`CompletionStage<List<V>>`; `CompletableFuture` remains compatible as an implementation. Cache reads are still split
+by element. Methods should declare `CompletionStage` or `CompletableFuture`, not a narrower custom stage subtype.
+Cache writes and after-invocation eviction run only after normal stage completion, and are skipped for
+exceptional completion or cancellation. This mode cannot be combined with `@Cacheable(sync=true)`.
+
+```java
+class FooService {
+  @Cacheable(cacheNames = "foo")
+  public CompletionStage<Map<Integer, Foo>> getMultiFoo(@CacheAsMulti Set<Integer> fooIds) {
+    return CompletableFuture.supplyAsync(() -> loadFromDb(fooIds));
+  }
+
+  @Cacheable(cacheNames = "foo")
+  public CompletionStage<List<Foo>> getMultiFooList(@CacheAsMulti List<Integer> fooIds) {
+    return CompletableFuture.supplyAsync(() -> loadListFromDb(fooIds));
+  }
+}
+```
 
 ### v1.3
 
@@ -89,8 +111,11 @@ There are two changes to the method of obtaining batch objects compared to the m
    to `Collection<Integer>` or `Set<Integer>` or `List<Integer>`.
 2. The return value changes from a single object to `Map<K, V>` or `List<V>`. For example, `Map<Integer, Foo>`
    or `List<Foo>`. If the returned type is `List`, it should be the same size as the "object collection parameter" and
-   in the same order(PS: After version v1.3, this limitation no longer exists. Please refer to
-   the [update details](#v13) for more information.).
+   in the same order, or get around the restrictions by adding properties in version 1.3, see [update details](#v13) for
+   more information.
+   Asynchronous `CompletionStage<Map<K, V>>` and `CompletionStage<List<V>>` return types are also supported, with
+   `CompletableFuture` remaining compatible. Cache writes and after-invocation eviction run only after normal stage
+   completion. This mode does not support `@Cacheable(sync=true)`; see [update details](#v14).
 
 #### Add Cache
 
@@ -307,6 +332,4 @@ spring:
           foo: PT15S  #foo cache for 15 seconds
           demo: PT5M  #demo cache for 5 minutes
 ```
-
-
 

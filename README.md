@@ -10,11 +10,35 @@
 <dependency>
    <groupId>io.github.ms100</groupId>
    <artifactId>cache-as-multi</artifactId>
-   <version>1.3.1</version>
+   <version>1.4.0</version>
 </dependency>
 ```
 
 ## 最近更新
+
+### v1.4
+
+批量缓存方法现支持 `CompletionStage<Map<K,V>>` 与 `CompletionStage<List<V>>` 两种异步返回类型，`CompletableFuture` 作为其实现保持兼容。方法声明应使用 `CompletionStage` 或 `CompletableFuture`，不能声明为更窄的自定义 Stage 子类型。缓存读取仍按元素拆分处理；缓存写入和 after-invocation eviction 仅在阶段正常完成时触发，异常或取消不会产生这些副作用。该场景不支持 `@Cacheable(sync=true)`。
+
+```java
+class FooService {
+   @Cacheable(cacheNames = "foo")
+   public CompletionStage<Map<Integer, Foo>> getMultiFoo(@CacheAsMulti Set<Integer> fooIds) {
+      return CompletableFuture.supplyAsync(() -> loadFromDb(fooIds));
+   }
+
+   @Cacheable(cacheNames = "foo")
+   public CompletionStage<List<Foo>> getMultiFooList(@CacheAsMulti List<Integer> fooIds) {
+      return CompletableFuture.supplyAsync(() -> loadListFromDb(fooIds));
+   }
+}
+```
+
+其他变更：
+
+- 移除对 `commons-lang3` 的依赖，减少传递依赖
+- Spring Boot 兼容版本降至 2.2.0.RELEASE，适配更广的 Spring 版本
+- 优化 Redis 自定义配置 Bean 的加载顺序
 
 ### v1.3
 
@@ -81,7 +105,10 @@ class FooService {
 1. 入参从单个对象(以下称【对象参数】)变为对象集合(以下称【对象集合参数】)，例如 `Integer` 变为 `Collection<Integer>`
    或 `Set<Integer>` 或 `List<Integer>`。
 2. 返回值从单个对象变为 `Map<K,V>` 或者 `List<V>` 。例如 `Map<Integer,Foo>` 或 `List<Foo>`，若返回的是 `List`
-   类型，那应与【对象集合参数】大小相同并顺序一致（PS: v1.3版本之后不再有此限制，详见[更新细节](#v13)）。
+   类型，那应与【对象集合参数】大小相同并顺序一致，或通过v1.3版本新增属性绕过限制，详见[更新细节](#v13)。
+   另外也支持 `CompletionStage<Map<K,V>>` 与 `CompletionStage<List<V>>` 这两种异步返回类型，`CompletableFuture`
+   作为实现保持兼容。缓存写入和 after-invocation eviction 仅在阶段正常完成时发生；该场景不支持
+   `@Cacheable(sync=true)`，详见[更新细节](#v14)。
 
 #### 加缓存
 
@@ -249,8 +276,6 @@ spring:
           foo: PT15S  #foo缓存15秒
           demo: PT5M  #demo缓存5分钟
 ```
-
-
 
 
 

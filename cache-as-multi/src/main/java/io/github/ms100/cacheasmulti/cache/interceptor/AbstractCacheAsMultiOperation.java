@@ -1,11 +1,11 @@
 package io.github.ms100.cacheasmulti.cache.interceptor;
 
 import io.github.ms100.cacheasmulti.cache.annotation.CacheAsMultiParameterDetail;
+import io.github.ms100.cacheasmulti.util.CollectionUtils;
 import lombok.Getter;
 import org.springframework.core.ResolvableType;
 import org.springframework.expression.spel.support.SimpleEvaluationContext;
 import org.springframework.lang.Nullable;
-import org.springframework.util.CollectionUtils;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -16,6 +16,10 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
 
 /**
@@ -26,15 +30,35 @@ public abstract class AbstractCacheAsMultiOperation {
     protected final CacheAsMultiParameterDetail parameterDetail;
 
     @Nullable
-    protected final Function<Collection<?>, Collection<?>> cacheAsMultiArgCreator;
-
-    @Nullable
     protected final ReturnTypeMaker returnTypeMaker;
+
+    @Getter
+    protected final boolean returnCompletionStage;
+
+    /**
+     * @deprecated use {@link #returnCompletionStage}
+     */
+    @Deprecated
+    protected final boolean returnCF;
 
     public AbstractCacheAsMultiOperation(Method method, CacheAsMultiParameterDetail parameterDetail) {
         this.parameterDetail = parameterDetail;
-        this.cacheAsMultiArgCreator = initializeCacheAsMultiArgCreator(parameterDetail);
-        this.returnTypeMaker = initializeReturnTypeMaker(method, parameterDetail);
+
+        ResolvableType returnResolvableType = ResolvableType.forMethodReturnType(method);
+        Class<?> returnType = returnResolvableType.toClass();
+        if (CompletionStage.class.isAssignableFrom(returnType)) {
+            if (!returnType.isAssignableFrom(CompletableFuture.class)) {
+                throw new IllegalStateException("The CompletionStage return type must be assignable from " +
+                        "CompletableFuture so cache hits and composed results can be returned on " + method);
+            }
+            returnResolvableType = returnResolvableType.getGeneric(0);
+            this.returnCompletionStage = true;
+        } else {
+            this.returnCompletionStage = false;
+        }
+        this.returnCF = this.returnCompletionStage;
+
+        this.returnTypeMaker = initializeReturnTypeMaker(returnResolvableType, method, parameterDetail);
         validateParameterDetail(method, parameterDetail);
     }
 
@@ -53,15 +77,17 @@ public abstract class AbstractCacheAsMultiOperation {
         return parameterDetail.getPosition();
     }
 
-    public boolean isStrictNull() {
-        return parameterDetail.isStrictNull();
-    }
-
     public Collection<?> newCacheAsMultiArg(Collection<?> subCacheAsMultiArg) {
-        assert cacheAsMultiArgCreator != null;
-        return cacheAsMultiArgCreator.apply(subCacheAsMultiArg);
+        Class<?> rawType = parameterDetail.getRawType();
+        if (rawType.isAssignableFrom(ArrayList.class)) {
+            return new ArrayList(subCacheAsMultiArg);
+        } else if (rawType.isAssignableFrom(HashSet.class)) {
+            return new HashSet(subCacheAsMultiArg);
+        }
+        throw new IllegalStateException("The @CacheAsMulti parameter should be assignable from ArrayList or HashSet, and assign to Collection");
     }
 
+    @Nullable
     public Map<?, ?> makeCacheMap(Collection<?> subCacheAsMultiArg, @Nullable Object invokeValues) {
         if (returnTypeMaker == null) {
             return null;
@@ -72,27 +98,75 @@ public abstract class AbstractCacheAsMultiOperation {
 
     @Nullable
     public Object makeReturnObject(Collection<?> cacheAsMultiArg, Map<?, ?> argValueMap) {
+        return makeReturnObject(cacheAsMultiArg, argValueMap, returnCompletionStage);
+    }
+
+    @Nullable
+    public Object makeReturnObject(Collection<?> cacheAsMultiArg, Map<?, ?> argValueMap, boolean cfWrap) {
         if (returnTypeMaker == null) {
             return null;
         }
 
-        return returnTypeMaker.makeReturnObject(parameterDetail, cacheAsMultiArg, argValueMap);
-    }
-
-    @Nullable
-    protected static Function<Collection<?>, Collection<?>> initializeCacheAsMultiArgCreator(CacheAsMultiParameterDetail parameterDetail) {
-        Class<?> rawType = parameterDetail.getRawType();
-        if (rawType.isAssignableFrom(ArrayList.class)) {
-            return ArrayList::new;
-        } else if (rawType.isAssignableFrom(HashSet.class)) {
-            return HashSet::new;
+        Object returnObject = returnTypeMaker.makeReturnObject(parameterDetail, cacheAsMultiArg, argValueMap);
+        if (cfWrap) {
+            return CompletableFuture.completedFuture(returnObject);
         }
-        return null;
+        return returnObject;
+    }
+
+    /**
+     * Compatibility alias for callers compiled against the original CompletableFuture-specific name.
+     *
+     * @return whether the declared method return type implements {@link CompletionStage}
+     */
+    @Deprecated
+    public boolean isReturnCF() {
+        return returnCompletionStage;
+    }
+
+    public <T, R> CompletionStage<R> mapCompletionStage(
+            CompletionStage<T> source, Function<? super T, ? extends R> mapper) {
+
+        CompletableFuture<R> target = new CompletableFuture<>();
+        source.whenComplete((value, failure) -> {
+            if (failure == null) {
+                try {
+                    target.complete(mapper.apply(value));
+                } catch (Throwable ex) {
+                    target.completeExceptionally(ex);
+                }
+                return;
+            }
+
+            Throwable cause = unwrapCompletionException(failure);
+            if (cause instanceof CancellationException || isCancelled(source)) {
+                target.cancel(false);
+            } else {
+                target.completeExceptionally(cause);
+            }
+        });
+        return target;
+    }
+
+    private static Throwable unwrapCompletionException(Throwable failure) {
+        Throwable current = failure;
+        while (current instanceof CompletionException && current.getCause() != null) {
+            current = current.getCause();
+        }
+        return current;
+    }
+
+    private static boolean isCancelled(CompletionStage<?> source) {
+        try {
+            return source.toCompletableFuture().isCancelled();
+        } catch (UnsupportedOperationException ignored) {
+            return false;
+        }
     }
 
     @Nullable
-    protected static ReturnTypeMaker<?> initializeReturnTypeMaker(Method method, CacheAsMultiParameterDetail parameterDetail) {
-        ResolvableType returnResolvableType = ResolvableType.forMethodReturnType(method);
+    protected static ReturnTypeMaker<?> initializeReturnTypeMaker(
+            ResolvableType returnResolvableType, Method method, CacheAsMultiParameterDetail parameterDetail) {
 
         Class<?> returnType = returnResolvableType.toClass();
         // 如果返回的是 Map，那么 Map 的 key 的类型应该与 collection 参数的泛型类型一致

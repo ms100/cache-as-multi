@@ -2,6 +2,7 @@ package io.github.ms100.cacheasmulti.jcache.interceptor;
 
 import io.github.ms100.cacheasmulti.cache.EnhancedCache;
 import io.github.ms100.cacheasmulti.cache.interceptor.CacheAsMultiOperationInvoker;
+import io.github.ms100.cacheasmulti.util.CollectionUtils;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.Cache.ValueWrapper;
@@ -9,13 +10,13 @@ import org.springframework.cache.interceptor.CacheErrorHandler;
 import org.springframework.cache.interceptor.CacheOperationInvoker;
 import org.springframework.cache.interceptor.CacheResolver;
 import org.springframework.lang.Nullable;
-import org.springframework.util.CollectionUtils;
 
 import javax.cache.annotation.CacheResult;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 
 /**
@@ -57,7 +58,7 @@ class CacheResultAsMultiInterceptor extends AbstractJCacheAsMultiInterceptor<Cac
             log.debug("Miss cache args " + missCacheAsMultiArg);
         }
         // 查询 miss 的结果
-        return invokeWithMissCacheAsMultiArg(context, invoker, missCacheAsMultiArg, argValueMap);
+        return invokeForMissCacheAsMultiArg(context, invoker, missCacheAsMultiArg, argValueMap);
     }
 
     private Collection<?> findInCache(CacheAsMultiOperationContext<CacheResultAsMultiOperation, CacheResult> context,
@@ -85,7 +86,8 @@ class CacheResultAsMultiInterceptor extends AbstractJCacheAsMultiInterceptor<Cac
             missCacheAsMultiArg = cacheAsMultiArg;
         } else {
             Collection<Object> newMissCacheAsMultiArg = new ArrayList<>(cacheAsMultiArg.size());
-            argKeyMap.forEach((argItem, key) -> {
+            cacheAsMultiArg.forEach(argItem -> {
+                Object key = argKeyMap.get(argItem);
                 ValueWrapper valueWrapper = hitKeyValueWrapperMap.get(key);
                 if (valueWrapper != null) {
                     argValueMap.put(argItem, valueWrapper.get());
@@ -101,13 +103,24 @@ class CacheResultAsMultiInterceptor extends AbstractJCacheAsMultiInterceptor<Cac
 
 
     @Nullable
-    private Object invokeWithMissCacheAsMultiArg(CacheAsMultiOperationContext<CacheResultAsMultiOperation, CacheResult> context,
-                                                 CacheOperationInvoker invoker, Collection<?> missCacheAsMultiArg,
-                                                 Map<Object, Object> argValueMap) {
+    private Object invokeForMissCacheAsMultiArg(CacheAsMultiOperationContext<CacheResultAsMultiOperation, CacheResult> context,
+                                                CacheOperationInvoker invoker, Collection<?> missCacheAsMultiArg,
+                                                Map<Object, Object> argValueMap) {
 
         checkForCachedException(context, missCacheAsMultiArg);
 
         Object invokeValues = invokeOperation(context, invoker, missCacheAsMultiArg);
+        CacheResultAsMultiOperation multiOperation = context.getMultiOperation();
+        if (multiOperation.isReturnCompletionStage() && invokeValues instanceof CompletionStage<?>) {
+            return multiOperation.mapCompletionStage((CompletionStage<?>) invokeValues,
+                    asyncValues -> cacheMissValueAndMakeReturn(context, missCacheAsMultiArg, argValueMap, asyncValues));
+        }
+        return cacheMissValueAndMakeReturn(context, missCacheAsMultiArg, argValueMap, invokeValues);
+    }
+
+    @Nullable
+    private Object cacheMissValueAndMakeReturn(CacheAsMultiOperationContext<CacheResultAsMultiOperation, CacheResult> context,
+                                               Collection<?> missCacheAsMultiArg, Map<Object, Object> argValueMap, Object invokeValues) {
         CacheResultAsMultiOperation multiOperation = context.getMultiOperation();
         Map<?, ?> missArgValueMap = multiOperation.makeCacheMap(missCacheAsMultiArg, invokeValues);
 
@@ -120,7 +133,7 @@ class CacheResultAsMultiInterceptor extends AbstractJCacheAsMultiInterceptor<Cac
             doMultiPut(cache, missKeyValueMap);
 
             // 如果缓存都未命中，直接返回执行结果
-            if (argValueMap.size() == 0) {
+            if (argValueMap.isEmpty()) {
                 return invokeValues;
             }
 
@@ -128,8 +141,7 @@ class CacheResultAsMultiInterceptor extends AbstractJCacheAsMultiInterceptor<Cac
         }
 
         Collection<?> cacheAsMultiArg = (Collection<?>) context.getCacheAsMultiArg();
-        assert cacheAsMultiArg != null;
-        return multiOperation.makeReturnObject(cacheAsMultiArg, argValueMap);
+        return multiOperation.makeReturnObject(cacheAsMultiArg, argValueMap, false);
     }
 
 
@@ -142,8 +154,8 @@ class CacheResultAsMultiInterceptor extends AbstractJCacheAsMultiInterceptor<Cac
             Collection<Object> missKeys = missCacheAsMultiArg.stream().map(context::generateKey).collect(Collectors.toList());
 
             Map<Object, ValueWrapper> keyThrowableWrapperMap = this.doMultiGet(exceptionCache, missKeys);
-            if (keyThrowableWrapperMap != null && keyThrowableWrapperMap.size() != 0) {
-                Object ex = keyThrowableWrapperMap.values().stream().filter(Objects::nonNull).findFirst().orElse(() -> null).get();
+            if (!CollectionUtils.isEmpty(keyThrowableWrapperMap)) {
+                Object ex = keyThrowableWrapperMap.values().stream().filter(Objects::nonNull).findFirst().map(ValueWrapper::get).orElse(null);
                 if (ex instanceof Throwable) {
                     throw new RuntimeException((Throwable) ex);
                 }
@@ -170,4 +182,3 @@ class CacheResultAsMultiInterceptor extends AbstractJCacheAsMultiInterceptor<Cac
         return ((CacheAsMultiOperationInvoker) invoker).invoke(invokeArg);
     }
 }
-

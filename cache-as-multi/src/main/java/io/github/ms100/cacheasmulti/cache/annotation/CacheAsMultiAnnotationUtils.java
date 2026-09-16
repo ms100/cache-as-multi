@@ -12,7 +12,7 @@ public abstract class CacheAsMultiAnnotationUtils {
 
     @Nullable
     public static CacheAsMultiParameterDetail findAnnotation(Method method) {
-        CacheAsMultiParameterDetail detail = null;
+        CacheAsMultiParameterDetail parameterDetail = null;
         int parameterCount = method.getParameterCount();
         Parameter[] parameters = method.getParameters();
         for (int i = 0; i < parameterCount; i++) {
@@ -21,13 +21,13 @@ public abstract class CacheAsMultiAnnotationUtils {
                 continue;
             }
             // @CacheAsMulti注解只能存在一个
-            if (detail != null) {
+            if (parameterDetail != null) {
                 throw new IllegalStateException("There can be only one @CacheAsMulti annotation in method parameters on " + method);
             }
 
-            detail = new CacheAsMultiParameterDetail(method, i);
+            parameterDetail = new CacheAsMultiParameterDetail(method, i);
         }
 
-        return detail;
+        return parameterDetail;
     }
 }
