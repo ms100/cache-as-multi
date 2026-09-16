@@ -17,7 +17,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.Arrays;
-import java.util.Objects;
 
 /**
  * 被{@link  CacheAsMulti @CacheAsMulti}注解的方法进行解析的结果，
@@ -67,7 +66,10 @@ abstract class AbstractJCacheAsMultiOperation<A extends Annotation> extends Abst
         Class<?> operationClass = operation.getClass();
 
         Field field = ReflectionUtils.findField(operationClass, fieldName);
-        Objects.requireNonNull(field, "Invalid operation, not found " + fieldName + " on class " + operation.getClass().getName());
+        if (field == null) {
+            throw new IllegalStateException(
+                    "Required Spring JCache field '" + fieldName + "' not found on " + operationClass.getName());
+        }
         field.setAccessible(true);
 
         return field.get(operation);

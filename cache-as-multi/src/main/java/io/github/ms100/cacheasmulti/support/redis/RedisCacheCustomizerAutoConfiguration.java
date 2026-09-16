@@ -9,6 +9,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.cache.annotation.AbstractCachingConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 
 /**
  * @author zhumengshuai
@@ -19,6 +20,7 @@ import org.springframework.context.annotation.Configuration;
 public class RedisCacheCustomizerAutoConfiguration extends AbstractCachingConfiguration {
 
     @Bean
+    @Order(0)
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = "spring.cache.redis.cache-as-multi", name = "serialize-to-json", havingValue = "true")
     public RedisCacheSerializeCustomizer redisCacheSerializeCustomizer() {
@@ -26,6 +28,7 @@ public class RedisCacheCustomizerAutoConfiguration extends AbstractCachingConfig
     }
 
     @Bean
+    @Order
     @ConditionalOnMissingBean
     @ConfigurationProperties(prefix = "spring.cache.redis.cache-as-multi")
     public RedisCacheTtlCustomizer redisCacheTtlCustomizer() {
