@@ -31,6 +31,7 @@ hs_err_pid*
 # IntelliJ IDEA
 .idea
 *.iml
+.DS_Store
 
 # Maven Submodules
 **/target/
@@ -45,3 +46,16 @@ hs_err_pid*
 application-*.yaml
 
 *.log
+.vscode/
+
+#AI
+.agents/
+.claude/
+.comet/
+.superpowers/
+openspec/
+# Keep ordinary documentation local, while allowing Comet's versioned
+# specifications and archive records to be committed.
+docs/
+.codex/
+.gemini/
