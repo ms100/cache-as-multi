@@ -6,6 +6,7 @@ import io.github.ms100.cacheasmulti.cache.convert.converter.ConcurrentMapEnhance
 import io.github.ms100.cacheasmulti.cache.convert.converter.EhcacheEnhancedCacheConverter;
 import io.github.ms100.cacheasmulti.cache.convert.converter.EnhancedCacheConverter;
 import io.github.ms100.cacheasmulti.cache.convert.converter.RedisEnhancedCacheConverter;
+import io.github.ms100.cacheasmulti.util.CollectionUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.Delegate;
 import lombok.extern.slf4j.Slf4j;
@@ -14,7 +15,6 @@ import org.springframework.cache.annotation.CachingConfigurationSelector;
 import org.springframework.core.convert.support.GenericConversionService;
 import org.springframework.lang.NonNull;
 import org.springframework.util.ClassUtils;
-import org.springframework.util.CollectionUtils;
 
 import java.util.Collection;
 import java.util.HashMap;

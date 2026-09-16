@@ -1,13 +1,13 @@
 package io.github.ms100.cacheasmulti.cache.convert.converter;
 
 import io.github.ms100.cacheasmulti.cache.EnhancedCache;
+import io.github.ms100.cacheasmulti.util.CollectionUtils;
 import lombok.SneakyThrows;
 import net.sf.ehcache.Ehcache;
 import net.sf.ehcache.Element;
 import org.springframework.cache.ehcache.EhCacheCache;
 import org.springframework.cache.support.SimpleValueWrapper;
 import org.springframework.lang.Nullable;
-import org.springframework.util.CollectionUtils;
 
 import java.util.ArrayList;
 import java.util.Collection;

@@ -3,10 +3,10 @@ package io.github.ms100.cacheasmulti.cache.convert.converter;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import io.github.ms100.cacheasmulti.cache.EnhancedCache;
+import io.github.ms100.cacheasmulti.util.CollectionUtils;
 import lombok.SneakyThrows;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.springframework.cache.caffeine.CaffeineCache;
-import org.springframework.util.CollectionUtils;
 
 import java.util.Collection;
 import java.util.Map;
