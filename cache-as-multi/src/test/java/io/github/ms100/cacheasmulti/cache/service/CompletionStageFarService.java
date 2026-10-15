@@ -27,6 +27,7 @@ public class CompletionStageFarService {
     private final AtomicInteger canceledLoadCount = new AtomicInteger();
     private final AtomicInteger wrappedCanceledLoadCount = new AtomicInteger();
     private CompletableFuture<Map<Integer, String>> pendingPut;
+    private CompletableFuture<Map<Integer, String>> pendingGet;
     private CompletableFuture<Map<Integer, String>> pendingAfterEvict;
     private CompletableFuture<Map<Integer, String>> pendingBeforeEvict;
     private List<Integer> lastListIds;
@@ -104,6 +105,13 @@ public class CompletionStageFarService {
         return TestCompletionStages.hideCompletableFuture(pendingPut);
     }
 
+    @Cacheable(cacheNames = "stage-far-deferred-map")
+    public CompletionStage<Map<Integer, String>> getMultiFarDeferred(
+            @CacheAsMulti Set<Integer> ids, String suffix) {
+        pendingGet = new CompletableFuture<>();
+        return TestCompletionStages.hideCompletableFuture(pendingGet);
+    }
+
     @CacheEvict(cacheNames = "stage-far-after-evict")
     public CompletionStage<Map<Integer, String>> evictMultiFarDeferred(
             @CacheAsMulti Set<Integer> ids, String suffix) {
@@ -127,7 +135,7 @@ public class CompletionStageFarService {
     @CacheEvict(cacheNames = {
             "stage-far-map", "stage-far-list", "stage-far-list-as-element",
             "stage-far-strict", "stage-far-ex", "stage-far-cancel", "stage-far-wrapped-cancel", "stage-far-put",
-            "stage-far-after-evict", "stage-far-before-evict", "stage-far-sync"
+            "stage-far-after-evict", "stage-far-before-evict", "stage-far-sync", "stage-far-deferred-map"
     }, allEntries = true)
     public void clearAll() {
     }
@@ -141,6 +149,7 @@ public class CompletionStageFarService {
         canceledLoadCount.set(0);
         wrappedCanceledLoadCount.set(0);
         pendingPut = null;
+        pendingGet = null;
         pendingAfterEvict = null;
         pendingBeforeEvict = null;
         lastListIds = null;
@@ -180,6 +189,10 @@ public class CompletionStageFarService {
 
     public void completePendingPut(Map<Integer, String> values) {
         pendingPut.complete(values);
+    }
+
+    public void completePendingGet(Map<Integer, String> values) {
+        pendingGet.complete(values);
     }
 
     public void failPendingPut(Throwable failure) {

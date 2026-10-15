@@ -9,6 +9,7 @@ import org.springframework.cache.interceptor.CacheOperationInvoker;
 
 import javax.cache.annotation.CachePut;
 import java.util.Map;
+import java.util.concurrent.CompletionStage;
 
 /**
  * @author zhumengshuai
@@ -32,6 +33,16 @@ class CachePutAsMultiInterceptor extends AbstractJCacheAsMultiInterceptor<CacheP
 
         try {
             Object result = invoker.invoke();
+            if (!earlyPut && multiOperation.isReturnCompletionStage() && result instanceof CompletionStage<?>) {
+                return multiOperation.mapCompletionStage((CompletionStage<?>) result, value -> {
+                    cacheValues(context);
+                    return value;
+                }, failure -> {
+                    if (multiOperation.getExceptionTypeFilter().match(failure.getClass())) {
+                        cacheValues(context);
+                    }
+                });
+            }
             if (!earlyPut) {
                 cacheValues(context);
             }

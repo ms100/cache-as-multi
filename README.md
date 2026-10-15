@@ -18,7 +18,7 @@
 
 ### v1.4
 
-批量缓存方法现支持 `CompletionStage<Map<K,V>>` 与 `CompletionStage<List<V>>` 两种异步返回类型，`CompletableFuture` 作为其实现保持兼容。方法声明应使用 `CompletionStage` 或 `CompletableFuture`，不能声明为更窄的自定义 Stage 子类型。缓存读取仍按元素拆分处理；缓存写入和 after-invocation eviction 仅在阶段正常完成时触发，异常或取消不会产生这些副作用。该场景不支持 `@Cacheable(sync=true)`。
+批量缓存方法现支持 `CompletionStage<Map<K,V>>` 与 `CompletionStage<List<V>>` 两种异步返回类型，`CompletableFuture` 作为其实现保持兼容。方法声明应使用 `CompletionStage` 或 `CompletableFuture`，不能声明为更窄的自定义 Stage 子类型。缓存读取仍按元素拆分处理；缓存写入和 after-invocation eviction 默认仅在阶段正常完成时触发，JCache 显式配置的 `cacheFor`／`noCacheFor`、`evictFor`／`noEvictFor` 异常规则仍然生效。源阶段取消，或调用方在完成回调开始前取消返回的 Future，会跳过这些后置副作用；取消不保证中断底层业务任务，也不会撤销已经执行的缓存操作。前置操作仍立即执行。该场景不支持 `@Cacheable(sync=true)`。
 
 ```java
 class FooService {

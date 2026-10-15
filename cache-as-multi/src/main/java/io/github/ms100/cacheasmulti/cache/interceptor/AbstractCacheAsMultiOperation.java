@@ -20,6 +20,7 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
@@ -77,6 +78,10 @@ public abstract class AbstractCacheAsMultiOperation {
         return parameterDetail.getPosition();
     }
 
+    public boolean isStrictNull() {
+        return parameterDetail.isStrictNull();
+    }
+
     public Collection<?> newCacheAsMultiArg(Collection<?> subCacheAsMultiArg) {
         Class<?> rawType = parameterDetail.getRawType();
         if (rawType.isAssignableFrom(ArrayList.class)) {
@@ -126,23 +131,39 @@ public abstract class AbstractCacheAsMultiOperation {
 
     public <T, R> CompletionStage<R> mapCompletionStage(
             CompletionStage<T> source, Function<? super T, ? extends R> mapper) {
+        return mapCompletionStage(source, mapper, failure -> {});
+    }
+
+    public <T, R> CompletionStage<R> mapCompletionStage(
+            CompletionStage<T> source, Function<? super T, ? extends R> mapper,
+            Consumer<? super Throwable> failureHandler) {
 
         CompletableFuture<R> target = new CompletableFuture<>();
+        // Propagate cancellation through our own wrappers without requiring every Stage to be a Future.
+        target.whenComplete((value, failure) -> {
+            if (target.isCancelled() && source instanceof CompletableFuture<?>) {
+                ((CompletableFuture<?>) source).cancel(false);
+            }
+        });
         source.whenComplete((value, failure) -> {
-            if (failure == null) {
-                try {
-                    target.complete(mapper.apply(value));
-                } catch (Throwable ex) {
-                    target.completeExceptionally(ex);
-                }
+            if (target.isDone()) {
                 return;
             }
+            try {
+                if (failure == null) {
+                    target.complete(mapper.apply(value));
+                    return;
+                }
 
-            Throwable cause = unwrapCompletionException(failure);
-            if (cause instanceof CancellationException || isCancelled(source)) {
-                target.cancel(false);
-            } else {
-                target.completeExceptionally(cause);
+                Throwable cause = unwrapCompletionException(failure);
+                if (cause instanceof CancellationException || isCancelled(source)) {
+                    target.cancel(false);
+                } else {
+                    failureHandler.accept(cause);
+                    target.completeExceptionally(cause);
+                }
+            } catch (Throwable ex) {
+                target.completeExceptionally(ex);
             }
         });
         return target;

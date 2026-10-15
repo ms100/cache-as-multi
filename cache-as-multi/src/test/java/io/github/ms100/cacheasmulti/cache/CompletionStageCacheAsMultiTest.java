@@ -176,6 +176,45 @@ class CompletionStageCacheAsMultiTest {
     }
 
     @Test
+    void callerCancellationPreventsCachePutAfterSourceCompletes() {
+        CompletionStage<Map<Integer, String>> stage = farService.putMultiFarDeferred(setOf(81), "P");
+
+        Assertions.assertTrue(stage.toCompletableFuture().cancel(false));
+        farService.completePendingPut(valueMap(81, "P"));
+
+        Assertions.assertTrue(stage.toCompletableFuture().isCancelled());
+        assertCacheMissing("stage-far-put", 81, "P");
+    }
+
+    @Test
+    void callerCancellationPreventsCacheWritesThroughNestedCacheableStages() {
+        Cache cache = requiredCache("stage-far-deferred-map");
+        cache.put(new SimpleKey(82, "G"), "already-cached");
+        CompletionStage<Map<Integer, String>> stage = farService.getMultiFarDeferred(setOf(82, 83), "G");
+
+        Assertions.assertTrue(stage.toCompletableFuture().cancel(false));
+        farService.completePendingGet(valueMap(83, "G"));
+
+        Assertions.assertTrue(stage.toCompletableFuture().isCancelled());
+        assertCached("stage-far-deferred-map", 82, "G", "already-cached");
+        assertCacheMissing("stage-far-deferred-map", 83, "G");
+    }
+
+    @Test
+    void callerCancellationPreventsAfterInvocationEviction() {
+        Cache cache = requiredCache("stage-far-after-evict");
+        Object key = new SimpleKey(84, "E");
+        cache.put(key, "keep-cached");
+        CompletionStage<Map<Integer, String>> stage = farService.evictMultiFarDeferred(setOf(84), "E");
+
+        Assertions.assertTrue(stage.toCompletableFuture().cancel(false));
+        farService.completePendingAfterEvict(valueMap(84, "E"));
+
+        Assertions.assertTrue(stage.toCompletableFuture().isCancelled());
+        Assertions.assertEquals("keep-cached", cache.get(key, String.class));
+    }
+
+    @Test
     void failedOrCanceledStageDoesNotRunAfterInvocationEviction() {
         Cache cache = requiredCache("stage-far-after-evict");
         Object failedKey = new SimpleKey(51, "F");

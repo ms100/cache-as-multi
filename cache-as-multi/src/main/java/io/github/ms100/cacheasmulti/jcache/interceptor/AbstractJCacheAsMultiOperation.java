@@ -44,7 +44,7 @@ abstract class AbstractJCacheAsMultiOperation<A extends Annotation> extends Abst
     protected static ExceptionTypeFilter initializeExceptionTypeFilter(
             Class<? extends Throwable>[] includes, Class<? extends Throwable>[] excludes) {
 
-        return new ExceptionTypeFilter(Arrays.asList(includes), Arrays.asList(excludes), true);
+        return new ExceptionTypeFilter(Arrays.asList(includes), Arrays.asList(excludes), false);
     }
 
     private static void validate(

@@ -22,8 +22,11 @@
 Batch cache methods now support asynchronous return types of `CompletionStage<Map<K, V>>` and
 `CompletionStage<List<V>>`; `CompletableFuture` remains compatible as an implementation. Cache reads are still split
 by element. Methods should declare `CompletionStage` or `CompletableFuture`, not a narrower custom stage subtype.
-Cache writes and after-invocation eviction run only after normal stage completion, and are skipped for
-exceptional completion or cancellation. This mode cannot be combined with `@Cacheable(sync=true)`.
+Cache writes and after-invocation eviction run after normal stage completion by default. JCache's explicit
+`cacheFor`/`noCacheFor` and `evictFor`/`noEvictFor` exception rules still apply. Source cancellation, or caller
+cancellation before the completion callback starts, skips these after-invocation actions. Cancellation does not
+guarantee that the business task stops or undo cache actions already performed. Before-invocation actions remain
+immediate. This mode cannot be combined with `@Cacheable(sync=true)`.
 
 ```java
 class FooService {

@@ -10,6 +10,7 @@ import org.springframework.cache.interceptor.CacheOperationInvoker;
 import javax.cache.annotation.CacheRemove;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.concurrent.CompletionStage;
 
 /**
  * @author zhumengshuai
@@ -33,6 +34,16 @@ class CacheRemoveAsMultiInterceptor extends AbstractJCacheAsMultiInterceptor<Cac
 
         try {
             Object result = invoker.invoke();
+            if (!earlyRemove && multiOperation.isReturnCompletionStage() && result instanceof CompletionStage<?>) {
+                return multiOperation.mapCompletionStage((CompletionStage<?>) result, value -> {
+                    removeValues(context);
+                    return value;
+                }, failure -> {
+                    if (multiOperation.getExceptionTypeFilter().match(failure.getClass())) {
+                        removeValues(context);
+                    }
+                });
+            }
             if (!earlyRemove) {
                 removeValues(context);
             }
